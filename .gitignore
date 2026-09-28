@@ -1,0 +1,20 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Environment and secrets
+.env
+.env.*
+*.token
+
+# OS and IDE
+.DS_Store
+.idea/
+.vscode/
+
+# Local assignment PDF
+*.pdf
