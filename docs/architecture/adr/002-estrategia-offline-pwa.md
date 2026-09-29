@@ -38,3 +38,5 @@ Si el cliente dependiera de una conexión HTTP en tiempo real, el 80% de los int
     *Mitigación:* Se implementa un listener en el evento `visibilitychange` y `focus` de la página para reanudar el envío en cuanto el usuario vuelve a abrir la PWA.
   - **Capacidad de almacenamiento local:** IndexedDB puede ser purgada por el sistema operativo si el smartphone se queda sin espacio de almacenamiento.  
     *Mitigación:* Se solicita almacenamiento persistente mediante `navigator.storage.persist()`, lo que impide que el navegador elimine la base de datos local ante limpiezas automáticas de memoria.
+  - **Prevención de tormentas de reconexión (*Thundering Herd*):** Si miles de dispositivos intentan reconectarse en el mismo segundo exacto, podrían saturar Nginx.  
+    *Mitigación:* El Service Worker aplicará una política de reintentos con retroceso exponencial y variación aleatoria (*Full Jitter*): $T_{\text{espera}} = \text{random}(0, \min(M, T_0 \cdot 2^{\text{intento}}))$, dispersando la carga de sincronización en una ventana suave de 3 minutos.
