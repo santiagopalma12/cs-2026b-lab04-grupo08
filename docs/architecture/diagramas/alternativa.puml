@@ -1,0 +1,70 @@
+@startuml
+skinparam dpi 220
+skinparam componentStyle rectangle
+skinparam defaultFontName Arial
+skinparam backgroundColor white
+skinparam roundCorner 8
+skinparam shadowing true
+
+title Alternativa B (Descartada): SismoReporta AQP con Microservicios y Apache Kafka
+
+actor "Ciudadano Afectado\n(PWA)" as CIU
+actor "Brigadista en Campo\n(App Móvil)" as BRIG
+actor "Coordinador COE\n(Dashboard)" as COE
+
+node "API Gateway & Ingress (Kong / Nginx)" as GW
+
+package "Clúster Kubernetes (EKS / GKE)" {
+    component [Servicio Ingesta\n(FastAPI Pods)] as S_INGEST
+    component [Servicio Triaje & Severidad\n(Python Pods)] as S_TRIAGE
+    component [Servicio Despacho Brigadas\n(Node/Python Pods)] as S_DISPATCH
+    component [Servicio GIS & Mapas\n(GeoDjango Pods)] as S_GIS
+    component [Servicio Alertas\n(Go Pods)] as S_ALERT
+}
+
+queue "Clúster Apache Kafka\n(Tópicos de Eventos Distribuidos)\n- reporte-recibido\n- incidente-priorizado\n- brigada-asignada" as KAFKA
+
+database "BD NoSQL Ingesta\n(MongoDB Clúster)" as DB_RAW
+database "BD Transaccional Triaje\n(PostgreSQL)" as DB_TRIAGE
+database "BD Despacho Brigadas\n(PostgreSQL)" as DB_BRIG
+database "BD Espacial GIS\n(PostGIS Distribuido)" as DB_GIS
+
+cloud "OpenStreetMap Tiles" as OSM
+cloud "Gateway SMS / Alertas" as SMS
+
+CIU --> GW : 1. Enviar reporte
+BRIG --> GW : Actualizar estado
+COE --> GW : Monitorear y despachar
+
+GW --> S_INGEST : /api/v1/reportes
+GW --> S_DISPATCH : /api/v1/brigadas
+GW --> S_GIS : /api/v1/gis/mapa
+GW --> S_ALERT : /api/v1/alertas
+
+S_INGEST --> DB_RAW : Persistencia cruda
+S_INGEST ..> KAFKA : Publica [reporte-recibido]
+
+KAFKA ..> S_TRIAGE : Consume eventos
+S_TRIAGE --> DB_TRIAGE
+S_TRIAGE ..> KAFKA : Publica [incidente-priorizado]
+
+KAFKA ..> S_DISPATCH : Consume incidentes
+S_DISPATCH --> DB_BRIG
+
+KAFKA ..> S_GIS : Consume para mapa
+S_GIS --> DB_GIS
+S_GIS --> OSM
+
+KAFKA ..> S_ALERT : Consume alertas
+S_ALERT --> SMS
+
+note bottom of KAFKA
+  **DESCARTADA (Puntaje en Matriz: 3.20 frente a 4.15):**
+  Aunque ofrece escalabilidad elástica y desacoplamiento extremo,
+  demanda desplegar +5 microservicios, 4 bases de datos heterogéneas,
+  un clúster Kafka y observabilidad distribuida (Jaeger/Prometheus).
+  Esta complejidad operativa excede la capacidad de un equipo de 2 developers (R-02),
+  eleva sustancialmente el costo mensual en nube (R-03) e incumple el plazo estricto de 1 mes (R-01).
+end note
+
+@enduml
