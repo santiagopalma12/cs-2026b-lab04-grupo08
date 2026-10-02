@@ -1,0 +1,101 @@
+flowchart TB
+    %% Actores del sistema
+    CIU["Ciudadano Afectado<br/>(PWA con IndexedDB)"]
+    BRIG["Brigadista en Campo<br/>(PWA / App Movil)"]
+    COE["Coordinador COE / Defensa Civil<br/>(Dashboard Web)"]
+
+    %% Capa perimetral de red
+    subgraph EDGE["Capa Perimetral & Proxy"]
+        NGX["Reverse Proxy Nginx<br/>(SSL + Rate Limiting + Gzip)"]
+    end
+
+    %% Núcleo del Monolito Modular
+    subgraph MONOLITH["SismoReporta AQP — Monolito Modular Asincrono (Un solo despliegue en VPS)"]
+        direction TB
+        
+        subgraph PRESENTATION["Capa de Presentacion & API Gateway Interno"]
+            API["FastAPI REST / WebSocket Gateway<br/>(Validacion de Schemas Pydantic)"]
+        end
+
+        subgraph MODULES["Modulos de Dominio (Bounded Contexts)"]
+            direction LR
+            M_INGEST["Ingesta & Sync<br/>(Ack Inmediato + Idempotencia)"]
+            M_TRIAGE["Triaje & Severidad<br/>(Priorizacion Automatica)"]
+            M_DISPATCH["Despacho & Brigadas<br/>(Asignacion por Proximidad)"]
+            M_GIS["GIS & Mapa de Calor<br/>(Clustering & Geocercas)"]
+            M_NOTIF["Notificaciones<br/>(Alertas Masivas Zonales)"]
+        end
+
+        subgraph WORKERS["Procesamiento Asincrono en Background"]
+            ASYNC_WORKERS["Workers Celery / Arq<br/>(Compresion de fotos, Triaje en cola, Deduplicacion)"]
+        end
+
+        subgraph INFRA_ADAPTERS["Capa de Infraestructura & Adaptadores"]
+            REPO["Repositorios de Datos & Adaptadores Externos"]
+        end
+    end
+
+    %% Capa de Almacenamiento y Persistencia
+    subgraph DATA["Almacenamiento & Colas"]
+        REDIS[("Redis en Memoria<br/>(Cola de Ingesta Masiva + Cache de Mapa)")]
+        POSTGIS[("PostgreSQL + PostGIS<br/>(Esquemas aislados por modulo + Indices R-Tree)")]
+        MINIO[("MinIO / Almacenamiento Local<br/>(Imagenes de Daños Estructurales)")]
+    end
+
+    %% Servicios Externos
+    subgraph EXTERNAL["Servicios Externos & Respaldo"]
+        OSM["OpenStreetMap / Tile Server<br/>(Cartografia & Capas Base)"]
+        SMS_GW["Gateway SMS / Mensajeria Masiva<br/>(Alertas de Evacuacion)"]
+        INDECI["API SINAGERD / INDECI<br/>(Interoperabilidad Gubernamental)"]
+    end
+
+    %% Conexiones de actores a capa perimetral
+    CIU -->|"1. Envia reporte (Online/Sync)"| NGX
+    BRIG -->|"Consulta ruta & actualiza estado"| NGX
+    COE -->|"Monitorea mapa & despacha brigadas"| NGX
+
+    %% De proxy a API Gateway
+    NGX --> API
+
+    %% De API Gateway a Módulos
+    API --> M_INGEST
+    API --> M_TRIAGE
+    API --> M_DISPATCH
+    API --> M_GIS
+    API --> M_NOTIF
+
+    %% Flujo asíncrono de Ingesta hacia Redis
+    M_INGEST -->|"Encola evento bruto (HTTP 202 Ack)"| REDIS
+    REDIS -->|"Consume rafaga de reportes"| ASYNC_WORKERS
+
+    %% Workers procesan con módulos
+    ASYNC_WORKERS --> M_TRIAGE
+    ASYNC_WORKERS --> M_GIS
+
+    %% Módulos hacia capa de infraestructura
+    M_INGEST & M_TRIAGE & M_DISPATCH & M_GIS & M_NOTIF --> REPO
+
+    %% Conexiones de persistencia
+    REPO --> POSTGIS
+    REPO --> REDIS
+    ASYNC_WORKERS -->|"Guarda fotos comprimidas"| MINIO
+
+    %% Conexiones con servicios externos
+    REPO -->|"Consulta tiles"| OSM
+    REPO -->|"Envia broadcast"| SMS_GW
+    REPO -->|"Sincroniza emergencias"| INDECI
+
+    %% Estilos visuales
+    classDef usr fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#0D47A1;
+    classDef edge fill:#ECEFF1,stroke:#455A64,stroke-width:2px,color:#263238;
+    classDef mod fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#1B5E20;
+    classDef worker fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#BF360C;
+    classDef db fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px,color:#4A148C;
+    classDef ext fill:#FBE9E7,stroke:#D84315,stroke-width:1.5px,stroke-dasharray: 4 3,color:#BF360C;
+
+    class CIU,BRIG,COE usr;
+    class NGX edge;
+    class M_INGEST,M_TRIAGE,M_DISPATCH,M_GIS,M_NOTIF mod;
+    class ASYNC_WORKERS worker;
+    class REDIS,POSTGIS,MINIO db;
+    class OSM,SMS_GW,INDECI ext;
