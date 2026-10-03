@@ -1,0 +1,74 @@
+@startuml
+skinparam dpi 220
+skinparam defaultFontName Arial
+skinparam backgroundColor white
+skinparam roundCorner 8
+skinparam shadowing true
+
+title Vista de Despliegue Físico de Infraestructura — SismoReporta AQP
+
+node "Dispositivos de Campo (Arequipa)" {
+    artifact "Smartphone Ciudadano\n[PWA + IndexedDB + Service Worker]" as DEV_CIU
+    artifact "Terminal Brigadista\n[PWA Campo + Geolocation API]" as DEV_BRIG
+    artifact "Estación COE / Defensa Civil\n[Dashboard Web Cartográfico]" as DEV_COE
+}
+
+node "Servidor Cloud VPS (Ubuntu Linux / 4 vCPU / 8GB RAM)" as VPS {
+    node "Nginx Reverse Proxy" as NGINX {
+        [SSL Termination / Rate Limiting / Gzip] as NGINX_CORE
+    }
+
+    node "Docker Engine" {
+        package "Contenedor: Monolito Modular Python" {
+            [FastAPI Web Gateway] as API
+            [Gunicorn Multi-Workers] as GUNICORN
+        }
+
+        package "Contenedor: Procesamiento Asíncrono" {
+            [Celery Workers (Triaje, Fotos & GIS)] as WORKERS
+        }
+
+        package "Contenedor: Cola & Caché" {
+            database "Redis 7 In-Memory\n[Buffer de Ingesta & Caché GeoJSON]" as REDIS
+        }
+
+        package "Contenedor: Base de Datos Espacial" {
+            database "PostgreSQL 16 + PostGIS\n[Esquemas: Ingesta, Triaje, Brigadas, GIS]" as POSTGIS
+        }
+
+        package "Contenedor: Almacenamiento Local" {
+            storage "MinIO S3 Compatible\n[Fotos Comprimidas de Daños]" as MINIO
+        }
+
+        package "Contenedor: Observabilidad" {
+            [Prometheus Metrics] as PROM
+            [Grafana Dashboard COE] as GRAF
+        }
+    }
+}
+
+cloud "Servicios Externos" {
+    [OpenStreetMap / Carto Tile Server] as OSM
+    [Gateway SMS / WhatsApp Emergencias] as SMS
+}
+
+DEV_CIU --> NGINX_CORE : HTTPS / Sync Diferido (POST /reportes)
+DEV_BRIG --> NGINX_CORE : HTTPS / WSS (Gestión de Intervenciones)
+DEV_COE --> NGINX_CORE : HTTPS / WSS (Tablero de Control)
+
+NGINX_CORE --> API : Reverse Proxy (Unix Socket)
+API --> GUNICORN
+
+API --> REDIS : 1. Encola reporte rápido (LPUSH) -> HTTP 202
+REDIS --> WORKERS : 2. Desencola ráfaga (BRPOP)
+WORKERS --> POSTGIS : 3. Persiste con validación espacial
+WORKERS --> MINIO : 4. Almacena foto comprimida
+WORKERS --> SMS : 5. Dispara alerta zonal si es crítico
+
+API ..> POSTGIS : Consultas de lectura
+API ..> REDIS : Lectura de caché de capas
+API ..> OSM : Consumo de mapas base
+API ..> PROM : Expone /metrics
+PROM --> GRAF : Visualización de RPS y latencia
+
+@enduml
