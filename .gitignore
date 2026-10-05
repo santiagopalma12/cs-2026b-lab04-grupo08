@@ -16,5 +16,9 @@ __pycache__/
 .idea/
 .vscode/
 
-# Local assignment PDF
+# Local assignment PDF and report source
 *.pdf
+informe_lab04.*
+PLANTILLA_LABORATORIO/
+abet.png
+sistemas.png
