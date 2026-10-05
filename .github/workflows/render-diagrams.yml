@@ -1,0 +1,55 @@
+name: Render Diagrams CI
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "docs/architecture/diagramas/**"
+      - ".github/workflows/render-diagrams.yml"
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  render-mermaid:
+    name: Validate and Render Mermaid Diagrams
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Mermaid CLI
+        run: |
+          npm install -g @mermaid-js/mermaid-cli
+
+      - name: Configure Puppeteer Sandbox for Linux Runner
+        run: |
+          echo '{"args": ["--no-sandbox", "--disable-setuid-sandbox"]}' > /tmp/puppeteer-config.json
+
+      - name: Create output directory if not exists
+        run: |
+          mkdir -p docs/architecture/diagramas/img
+
+      - name: Render Mermaid Architecture Diagram to PNG
+        run: |
+          mmdc -p /tmp/puppeteer-config.json \
+               -i docs/architecture/diagramas/arquitectura.mmd \
+               -o docs/architecture/diagramas/img/arquitectura.png \
+               -b white \
+               -s 2
+
+      - name: Render Mermaid Architecture Diagram to SVG
+        run: |
+          mmdc -p /tmp/puppeteer-config.json \
+               -i docs/architecture/diagramas/arquitectura.mmd \
+               -o docs/architecture/diagramas/img/arquitectura.svg
+
+      - name: Verify Generated Images
+        run: |
+          ls -la docs/architecture/diagramas/img/
+          test -f docs/architecture/diagramas/img/arquitectura.png
+          echo "Diagram validation and rendering completed successfully!"
