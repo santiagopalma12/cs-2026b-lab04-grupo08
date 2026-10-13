@@ -148,3 +148,109 @@ flowchart TB
 
 ## Reflexión sobre el uso de la IA (5 a 8 líneas)
 Los asistentes de Inteligencia Artificial demostraron una gran agilidad para generar esqueletos de diagramas en sintaxis de código y redactar borradores iniciales de escenarios y ADRs. Sin embargo, su tendencia a recomendar por defecto soluciones hipercomplejas de moda (como microservicios serverless en AWS o clústeres de Kubernetes) requirió una postura crítica constante por parte del equipo para rechazar propuestas incompatibles con nuestro presupuesto de un único VPS y el plazo límite de 1 mes. Asimismo, la IA introdujo inconsistencias en capacidades reales de los navegadores (como asegurar falsamente soporte total de Background Sync en Safari iOS), lo que reforzó nuestro aprendizaje de contrastar siempre cada afirmación técnica contra la documentación oficial de ingeniería. En conclusión, la IA es un acelerador productivo excepcional para explorar opciones, pero el juicio arquitectónico final, la verificación empírica y la asunción de compromisos corresponden exclusivamente a los ingenieros.
+
+---
+
+## Diseño UML (Lab 05)
+
+En este laboratorio se profundiza el diseño detallado del sistema mediante el paradigma **UML como Código (Diagram as Code)** versionado en Git, aplicando ingeniería directa e inversa con soporte crítico de Inteligencia Artificial y auditoría mediante las reglas de consistencia C1–C5.
+
+### Entregables del Laboratorio
+* **E1: Historia de Usuario y Diagrama de Clases:**  
+  * Documento de Historia: [`docs/design/historia.md`](docs/design/historia.md)
+  * Código PlantUML: [`docs/design/clases.puml`](docs/design/clases.puml)
+  * Imagen Renderizada: [`docs/design/img/clases.png`](docs/design/img/clases.png)
+* **E2: Diagrama de Secuencia del Flujo Crítico:**  
+  * Código PlantUML: [`docs/design/secuencia-sincronizar-reporte.puml`](docs/design/secuencia-sincronizar-reporte.puml)
+  * Imagen Renderizada: [`docs/design/img/secuencia-sincronizar-reporte.png`](docs/design/img/secuencia-sincronizar-reporte.png)
+* **E3: Diagrama de Máquina de Estados:**  
+  * Código Mermaid: [`docs/design/estados-reporte.mmd`](docs/design/estados-reporte.mmd)
+  * Imagen Renderizada: [`docs/design/img/estados-reporte.png`](docs/design/img/estados-reporte.png)
+* **E4: Diagrama de Actividades de Procesos:**  
+  * Código PlantUML: [`docs/design/actividades-priorizar-asignar.puml`](docs/design/actividades-priorizar-asignar.puml)
+  * Imagen Renderizada: [`docs/design/img/actividades-priorizar-asignar.png`](docs/design/img/actividades-priorizar-asignar.png)
+* **E5: Diagrama de Paquetes Modulares:**  
+  * Código PlantUML: [`docs/design/paquetes.puml`](docs/design/paquetes.puml)
+  * Imagen Renderizada: [`docs/design/img/paquetes.png`](docs/design/img/paquetes.png)
+* **E6: Round-Trip con IA e Ingeniería Inversa:**  
+  * Código Fuente en Python: [`src/sismoreporta/dominio.py`](src/sismoreporta/dominio.py)
+  * Diagrama Obtenido por Pyreverse: [`docs/design/classes_sismoreporta.puml`](docs/design/classes_sismoreporta.puml)
+  * Imagen de Ingeniería Inversa: [`docs/design/img/classes_sismoreporta.png`](docs/design/img/classes_sismoreporta.png)
+  * Análisis de Diferencias: [`docs/design/round-trip.md`](docs/design/round-trip.md)
+* **E7: Auditoría de Consistencia y Bitácora de IA:**  
+  * Matriz de Verificación C1–C5: [`docs/design/consistencia.md`](docs/design/consistencia.md)
+  * Bitácora de Prompts e Interacciones Críticas: [`docs/design/bitacora-ia.md`](docs/design/bitacora-ia.md)
+* **Cuestionario Teórico-Práctico:**  
+  * Solución a las 8 Preguntas: [`CUESTIONARIO.md`](CUESTIONARIO.md)
+* **Informe Formal:**  
+  * Documento Typst compilable: [`informe_lab05.typ`](informe_lab05.typ)
+  * Documento PDF final: [`informe_lab05.pdf`](informe_lab05.pdf)
+
+---
+
+### Diagrama de Máquina de Estados Embebido (E3 — Mermaid)
+
+```mermaid
+stateDiagram-v2
+    [*] --> BORRADOR : guardarBorrador()
+    
+    BORRADOR --> ENCOLADO : encolarOffline() [sin conexion de red]
+    BORRADOR --> RECIBIDO : sincronizar() [conexion de red disponible]
+    
+    ENCOLADO --> RECIBIDO : sincronizar(fecha) [senal detectada y geocerca valida]
+    ENCOLADO --> DESCARTADO : descartar(motivo) [fuera de perimetro provincial]
+    
+    RECIBIDO --> VERIFICADO : verificarTriaje(score) [scorePrioridad >= 0.70]
+    RECIBIDO --> DESCARTADO : descartar("duplicado") [reporte duplicado < 50m]
+    
+    VERIFICADO --> ATENDIDO : atenderIncidente() [brigada reporta mision cumplida]
+    
+    ATENDIDO --> [*]
+    DESCARTADO --> [*]
+
+    note right of ENCOLADO
+        Persistido localmente en IndexedDB
+        del dispositivo movil del ciudadano
+    end note
+
+    note right of RECIBIDO
+        Al entrar: Almacenar en PostgreSQL
+        y encolar en Redis para triaje
+    end note
+
+    note right of VERIFICADO
+        Al entrar: Clasificado por severidad
+        y visible en mapa de calor COE
+    end note
+```
+
+---
+
+## Cómo Reproducir el Proyecto
+
+### 1. Requisitos
+* Python 3.10+
+* OpenJDK 17+ y PlantUML (`plantuml.jar`)
+* Typst CLI (`typst`)
+* Pylint / Pyreverse (`pip install pylint`)
+
+### 2. Renderizado de Diagramas UML
+```bash
+# Renderizar diagramas PlantUML
+java -jar plantuml.jar -tpng docs/design/clases.puml -o img/
+java -jar plantuml.jar -tpng docs/design/secuencia-sincronizar-reporte.puml -o img/
+java -jar plantuml.jar -tpng docs/design/actividades-priorizar-asignar.puml -o img/
+java -jar plantuml.jar -tpng docs/design/paquetes.puml -o img/
+java -jar plantuml.jar -tpng docs/design/estados-reporte.puml -o img/
+```
+
+### 3. Ingeniería Inversa (Round-Trip)
+```bash
+pyreverse -o puml -p sismoreporta src/sismoreporta
+java -jar plantuml.jar -tpng classes_sismoreporta.puml -o docs/design/img/
+```
+
+### 4. Compilación del Informe Formal en Typst
+```bash
+typst compile informe_lab05.typ informe_lab05.pdf
+```

@@ -19,6 +19,7 @@ __pycache__/
 # Local assignment PDF and report source
 *.pdf
 informe_lab04.*
+informe_lab05.*
 PLANTILLA_LABORATORIO/
 abet.png
 sistemas.png
