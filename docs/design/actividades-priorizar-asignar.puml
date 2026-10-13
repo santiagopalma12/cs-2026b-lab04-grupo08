@@ -1,0 +1,58 @@
+@startuml actividades-priorizar-asignar
+!pragma layout smetana
+skinparam shadowing false
+skinparam defaultFontName "Liberation Sans", Arial, sans-serif
+skinparam ActivityBackgroundColor #F4F7FB
+skinparam ActivityBorderColor #1A3A5C
+skinparam ActivityDiamondBackgroundColor #FFF8E7
+skinparam ActivityDiamondBorderColor #B26B00
+
+title SismoReporta AQP — Diagrama de Actividades: Priorización y Asignación de Brigadas (E4)
+
+|Motor de Triaje y GIS (Sistema)|
+start
+:Consume reporte encolado desde Redis;
+:Evalúa coordenadas con PostGIS\n(Deduplicación espacial < 50m);
+
+if (¿Es reporte duplicado o spam?) then (sí)
+    :Marca reporte como DESCARTADO;
+    :Consolida contador en incidente existente;
+    stop
+else (no)
+    :Calcula índice de criticidad y severidad\n(ponderando colapso, personas atrapadas y heridos);
+    :Actualiza mapa de calor y clúster geoespacial;
+endif
+
+|Coordinador COE (Defensa Civil)|
+:Visualiza tablero de comando con incidentes críticos priorizados;
+:Selecciona incidente de máxima severidad;
+:Consulta sugerencia de brigadas más cercanas por proximidad GPS;
+
+if (¿Hay brigada disponible con especialidad requerida?) then (sí)
+    :Confirma asignación manual o automática de brigada;
+else (no)
+    :Reclasifica misión en cola de espera de alta prioridad;
+    :Solicita refuerzo interinstitucional (Cruz Roja / Bomberos);
+    stop
+endif
+
+|Motor de Triaje y GIS (Sistema)|
+fork
+    :Envía alerta inmediata a terminal móvil\ny radio de la brigada asignada;
+fork again
+    :Actualiza estado del incidente a VERIFICADO\ny bloquea reasignación en el tablero GIS;
+fork again
+    :Emite aviso zonal geocercado a la población\nindicando que la ayuda está en camino;
+end fork
+
+|Brigada de Rescate (Campo)|
+:Recibe despacho y coordenadas del punto de auxilio;
+:Se desplaza a la zona afectada e inicia labores de rescate;
+:Reporta conclusión de misión de auxilio ("ATENDIDO");
+
+|Coordinador COE (Defensa Civil)|
+:Valida informe de campo de la brigada;
+:Cierra incidente en la plataforma central;
+
+stop
+@enduml
