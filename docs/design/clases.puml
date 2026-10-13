@@ -1,0 +1,147 @@
+@startuml clases
+!pragma layout smetana
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam defaultFontName "Liberation Sans", Arial, sans-serif
+skinparam classBackgroundColor #F4F7FB
+skinparam classBorderColor #1A3A5C
+skinparam classHeaderBackgroundColor #E2EAF4
+skinparam interfaceBackgroundColor #FFF8E7
+skinparam interfaceBorderColor #B26B00
+skinparam enumBackgroundColor #F3E5F5
+skinparam enumBorderColor #6A1B9A
+
+title SismoReporta AQP — Diagrama de Clases (Módulos Ingesta, Triaje y Brigadas)
+
+enum EstadoReporte {
+  BORRADOR
+  ENCOLADO
+  RECIBIDO
+  VERIFICADO
+  ATENDIDO
+  DESCARTADO
+}
+
+enum Severidad {
+  LEVE
+  MODERADA
+  GRAVE
+  CATASTROFICA
+}
+
+class Coordenadas <<ValueObject>> {
+  - latitud: Decimal
+  - longitud: Decimal
+  - precisionMetros: Decimal
+  + estaDentroDeGeocerca(poligonoArequipa: String): bool
+  + distanciaHacia(otra: Coordenadas): Decimal
+}
+
+class FotoEvidencia {
+  - id: UUID
+  - hashSha256: String
+  - tamanioBytes: int
+  - comprimida: bool
+  + validarTamanioMaximo(limiteBytes: int): bool
+  + obtenerRutaAlmacenamiento(): String
+}
+
+class Ciudadano {
+  - id: UUID
+  - identificadorAnonimo: String
+  - telefonoContacto: String
+  + registrarReporte(descripcion: String, coords: Coordenadas, sev: Severidad): Reporte
+}
+
+class Reporte {
+  - id: UUID
+  - fechaCreacion: DateTime
+  - fechaSincronizacion: DateTime
+  - descripcion: String
+  - severidad: Severidad
+  - estado: EstadoReporte
+  - reintentosSync: int
+  + guardarBorrador(): void
+  + encolarOffline(): void
+  + sincronizar(fecha: DateTime): void
+  + verificarTriaje(scorePrioridad: Decimal): void
+  + asignarBrigada(brigadaId: UUID): void
+  + atenderIncidente(): void
+  + descartar(motivo: String): void
+  + adjuntarFoto(foto: FotoEvidencia): void
+}
+
+class ZonaImpacto {
+  - id: UUID
+  - nombreDistrito: String
+  - geocercaPoligono: String
+  - nivelRiesgo: Severidad
+  + registrarReporteEnZona(r: Reporte): void
+  + calcularIndiceCriticidad(): Decimal
+}
+
+class Brigada {
+  - id: UUID
+  - codigoIndicativo: String
+  - especialidad: String
+  - disponible: bool
+  + asignarMision(reporteId: UUID): void
+  + finalizarAtencion(): void
+  + actualizarUbicacion(coords: Coordenadas): void
+}
+
+interface IBrokerCola <<puerto>> {
+  + encolarReporte(canal: String, payloadJson: String): bool
+}
+
+interface IRepositorioReportes <<puerto>> {
+  + buscarPorId(id: UUID): Reporte
+  + guardar(reporte: Reporte): void
+  + listarPorEstado(estado: EstadoReporte): List<Reporte>
+}
+
+interface INotificadorEmergencias <<puerto>> {
+  + enviarAlertaZonal(distrito: String, mensaje: String): void
+  + notificarDespachoBrigada(brigadaId: UUID, reporteId: UUID): void
+}
+
+class RedisBrokerAdapter <<adaptador>> {
+  - host: String
+  - puerto: int
+  + encolarReporte(canal: String, payloadJson: String): bool
+}
+
+class PostgresReporteAdapter <<adaptador>> {
+  - connectionString: String
+  + buscarPorId(id: UUID): Reporte
+  + guardar(reporte: Reporte): void
+  + listarPorEstado(estado: EstadoReporte): List<Reporte>
+}
+
+class ServicioSincronizacion <<servicio>> {
+  + sincronizarReporte(reporte: Reporte): bool
+  + procesarLoteOffline(reportes: List<Reporte>): int
+  + reintentarFallidos(): void
+}
+
+' Relaciones y Multiplicidades (Regla C3 y C5)
+Ciudadano "1" -- "0..*" Reporte : registra >
+Reporte "1" *-- "1" Coordenadas : ubicado en >
+Reporte "1" *-- "0..3" FotoEvidencia : adjunta >
+Reporte --> EstadoReporte : posee
+Reporte --> Severidad : clasificado como
+ZonaImpacto "1" o-- "0..*" Reporte : agrupa >
+ZonaImpacto "1" -- "0..*" Brigada : asignada a >
+Brigada "0..1" -- "0..*" Reporte : asiste >
+Brigada "1" *-- "1" Coordenadas : posicionada en >
+
+' Realización de Puertos / Interfaces (ADR-001)
+IBrokerCola <|.. RedisBrokerAdapter
+IRepositorioReportes <|.. PostgresReporteAdapter
+
+' Dependencias de Servicios
+ServicioSincronizacion ..> Reporte : gestiona
+ServicioSincronizacion ..> IBrokerCola : publica en
+ServicioSincronizacion ..> IRepositorioReportes : persiste en
+ServicioSincronizacion ..> INotificadorEmergencias : emite alertas con
+@enduml
