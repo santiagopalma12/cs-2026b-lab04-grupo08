@@ -1,0 +1,42 @@
+@startuml estados-reporte
+!pragma layout smetana
+skinparam shadowing false
+skinparam defaultFontName "Liberation Sans", Arial, sans-serif
+skinparam stateBackgroundColor #F4F7FB
+skinparam stateBorderColor #1A3A5C
+skinparam stateHeaderBackgroundColor #E2EAF4
+
+title SismoReporta AQP — Máquina de Estados de la Entidad Reporte (E3)
+
+[*] --> BORRADOR : guardarBorrador()
+
+BORRADOR --> ENCOLADO : encolarOffline()\n[sin conexion de red]
+BORRADOR --> RECIBIDO : sincronizar()\n[conexion disponible]
+
+ENCOLADO --> RECIBIDO : sincronizar(fecha)\n[senal detectada y geocerca valida]
+ENCOLADO --> DESCARTADO : descartar(motivo)\n[fuera de perimetro provincial]
+
+RECIBIDO --> VERIFICADO : verificarTriaje(score)\n[scorePrioridad >= 0.70]
+RECIBIDO --> DESCARTADO : descartar("duplicado")\n[distancia espacial < 50m]
+
+VERIFICADO --> ATENDIDO : atenderIncidente()\n[brigada reporta mision cumplida]
+
+ATENDIDO --> [*]
+DESCARTADO --> [*]
+
+note right of ENCOLADO
+  Persistido localmente en IndexedDB
+  del navegador del ciudadano
+end note
+
+note right of RECIBIDO
+  Al entrar: Persistir en PostgreSQL
+  y encolar en Redis (buffer de triaje)
+end note
+
+note right of VERIFICADO
+  Al entrar: Clasificado por severidad
+  y visible en tablero GIS de Defensa Civil
+end note
+
+@enduml

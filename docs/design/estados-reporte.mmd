@@ -1,0 +1,31 @@
+stateDiagram-v2
+    [*] --> BORRADOR : guardarBorrador()
+    
+    BORRADOR --> ENCOLADO : encolarOffline() [sin conexion de red]
+    BORRADOR --> RECIBIDO : sincronizar() [conexion de red disponible]
+    
+    ENCOLADO --> RECIBIDO : sincronizar(fecha) [senal detectada y geocerca valida]
+    ENCOLADO --> DESCARTADO : descartar(motivo) [fuera de perimetro provincial]
+    
+    RECIBIDO --> VERIFICADO : verificarTriaje(score) [scorePrioridad >= 0.70]
+    RECIBIDO --> DESCARTADO : descartar("duplicado") [reporte duplicado < 50m]
+    
+    VERIFICADO --> ATENDIDO : atenderIncidente() [brigada reporta mision cumplida]
+    
+    ATENDIDO --> [*]
+    DESCARTADO --> [*]
+
+    note right of ENCOLADO
+        Persistido localmente en IndexedDB
+        del dispositivo movil del ciudadano
+    end note
+
+    note right of RECIBIDO
+        Al entrar: Almacenar en PostgreSQL
+        y encolar en Redis para triaje
+    end note
+
+    note right of VERIFICADO
+        Al entrar: Clasificado por severidad
+        y visible en mapa de calor COE
+    end note
