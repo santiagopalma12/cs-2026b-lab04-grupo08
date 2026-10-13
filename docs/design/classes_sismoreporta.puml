@@ -1,0 +1,111 @@
+@startuml classes_sismoreporta
+!pragma layout smetana
+set namespaceSeparator none
+class "Brigada" as sismoreporta.dominio.Brigada {
+  codigo_indicativo : str
+  disponible : bool
+  especialidad : str
+  id : UUID
+  mision_actual_id : Optional[UUID]
+  ubicacion_actual
+  actualizar_ubicacion(coords: Coordenadas) -> None
+  asignar_mision(reporte_id: UUID) -> None
+  finalizar_atencion() -> None
+}
+class "Ciudadano" as sismoreporta.dominio.Ciudadano {
+  id : UUID
+  identificador_anonimo : str
+  telefono_contacto : str
+  registrar_reporte(descripcion: str, coords: Coordenadas, sev: Severidad) -> Reporte
+}
+class "Coordenadas" as sismoreporta.dominio.Coordenadas {
+  latitud
+  longitud
+  precision_metros
+  distancia_hacia(otra: Coordenadas) -> Decimal
+  esta_dentro_de_geocerca(poligono_arequipa: str) -> bool
+}
+class "EstadoReporte" as sismoreporta.dominio.EstadoReporte {
+  name
+}
+class "FotoEvidencia" as sismoreporta.dominio.FotoEvidencia {
+  comprimida : bool
+  hash_sha256 : str
+  id : UUID
+  tamanio_bytes : int
+  obtener_ruta_almacenamiento() -> str
+  validar_tamanio_maximo(limite_bytes: int) -> bool
+}
+class "IBrokerCola" as sismoreporta.dominio.IBrokerCola {
+  {abstract}encolar_reporte(canal: str, payload_json: str) -> bool
+}
+class "INotificadorEmergencias" as sismoreporta.dominio.INotificadorEmergencias {
+  {abstract}enviar_alerta_zonal(distrito: str, mensaje: str) -> None
+  {abstract}notificar_despacho_brigada(brigada_id: UUID, reporte_id: UUID) -> None
+}
+class "IRepositorioReportes" as sismoreporta.dominio.IRepositorioReportes {
+  {abstract}buscar_por_id(id: UUID) -> Optional[Reporte]
+  {abstract}guardar(reporte: Reporte) -> None
+  {abstract}listar_por_estado(estado: EstadoReporte) -> List[Reporte]
+}
+class "PostgresReporteAdapter" as sismoreporta.dominio.PostgresReporteAdapter {
+  connection_string : str
+  {abstract}buscar_por_id(id: UUID) -> Optional[Reporte]
+  {abstract}guardar(reporte: Reporte) -> None
+  {abstract}listar_por_estado(estado: EstadoReporte) -> List[Reporte]
+}
+class "RedisBrokerAdapter" as sismoreporta.dominio.RedisBrokerAdapter {
+  host : str
+  puerto : int
+  {abstract}encolar_reporte(canal: str, payload_json: str) -> bool
+}
+class "Reporte" as sismoreporta.dominio.Reporte {
+  brigada_id : Optional[UUID]
+  coordenadas
+  descripcion : str
+  estado
+  fecha_creacion : datetime
+  fecha_sincronizacion : Optional[datetime]
+  fotos : List[FotoEvidencia]
+  id : UUID
+  reintentos_sync : int
+  severidad
+  adjuntar_foto(foto: FotoEvidencia) -> None
+  asignar_brigada(brigada_id: UUID) -> None
+  atender_incidente() -> None
+  descartar(motivo: str) -> None
+  encolar_offline() -> None
+  guardar_borrador() -> None
+  sincronizar(fecha: datetime) -> None
+  verificar_triaje(score_prioridad: Decimal) -> None
+}
+class "ServicioSincronizacion" as sismoreporta.dominio.ServicioSincronizacion {
+  broker
+  notificador
+  repo
+  procesar_lote_offline(reportes: List[Reporte]) -> int
+  sincronizar_reporte(reporte: Reporte) -> bool
+}
+class "Severidad" as sismoreporta.dominio.Severidad {
+  name
+}
+class "ZonaImpacto" as sismoreporta.dominio.ZonaImpacto {
+  geocerca_poligono : str
+  id : UUID
+  nivel_riesgo
+  nombre_distrito : str
+  reportes : List[Reporte]
+  calcular_indice_criticidad() -> Decimal
+  registrar_reporte_en_zona(r: Reporte) -> None
+}
+sismoreporta.dominio.PostgresReporteAdapter --|> sismoreporta.dominio.IRepositorioReportes
+sismoreporta.dominio.RedisBrokerAdapter --|> sismoreporta.dominio.IBrokerCola
+sismoreporta.dominio.Brigada --> sismoreporta.dominio.Coordenadas : ubicacion_actual
+sismoreporta.dominio.Reporte --> sismoreporta.dominio.Coordenadas : coordenadas
+sismoreporta.dominio.Reporte --> sismoreporta.dominio.EstadoReporte : estado
+sismoreporta.dominio.Reporte --> sismoreporta.dominio.Severidad : severidad
+sismoreporta.dominio.ZonaImpacto --> sismoreporta.dominio.Severidad : nivel_riesgo
+sismoreporta.dominio.IBrokerCola --o sismoreporta.dominio.ServicioSincronizacion : broker
+sismoreporta.dominio.INotificadorEmergencias --o sismoreporta.dominio.ServicioSincronizacion : notificador
+sismoreporta.dominio.IRepositorioReportes --o sismoreporta.dominio.ServicioSincronizacion : repo
+@enduml

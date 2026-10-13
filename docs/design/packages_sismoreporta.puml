@@ -1,0 +1,8 @@
+@startuml packages_sismoreporta
+set namespaceSeparator none
+package "sismoreporta" as sismoreporta {
+}
+package "sismoreporta.dominio" as sismoreporta.dominio {
+}
+sismoreporta --> sismoreporta.dominio
+@enduml
