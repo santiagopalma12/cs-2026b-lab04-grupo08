@@ -1,0 +1,68 @@
+@startuml paquetes
+!pragma layout smetana
+skinparam shadowing false
+skinparam defaultFontName "Liberation Sans", Arial, sans-serif
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor #F4F7FB
+skinparam packageBorderColor #1A3A5C
+
+title SismoReporta AQP — Diagrama de Paquetes del Monolito Modular (E5)
+
+package "sismoreporta" {
+    package "ingesta" as ING #E3F2FD {
+        class ServicioSincronizacion
+        class SyncController
+        interface IRepositorioReportes <<puerto>>
+    }
+
+    package "triaje" as TRI #E8F5E9 {
+        class MotorTriaje
+        class EvaluadorSeveridad
+    }
+
+    package "brigadas" as BRI #FFF3E0 {
+        class GestorBrigadas
+        class AsignadorProximidad
+    }
+
+    package "gis" as GIS #F3E5F5 {
+        class ServicioPostGIS
+        class GeneradorMapaCalor
+    }
+
+    package "notificaciones" as NOT #FCE4EC {
+        interface INotificadorEmergencias <<puerto>>
+        class ServicioAlertasZonales
+    }
+
+    package "compartido" as COM #ECEFF1 {
+        class Reporte
+        class Coordenadas
+        class FotoEvidencia
+        enum EstadoReporte
+        enum Severidad
+        interface IBrokerCola <<puerto>>
+    }
+}
+
+' Dependencias entre módulos del dominio (Regla C4: Acíclicas)
+ING ..> COM : usa Reporte, Coordenadas
+TRI ..> COM : usa Reporte, Severidad
+BRI ..> COM : usa Brigada, Coordenadas
+GIS ..> COM : procesa Coordenadas
+NOT ..> COM : usa Reporte, ZonaImpacto
+
+ING ..> TRI : notifica eventos vía IBrokerCola\n(Desacoplamiento asíncrono)
+TRI ..> GIS : consulta ST_DWithin y ST_Cluster\n(Deduplicación espacial)
+BRI ..> GIS : consulta distancia geodésica\n(Asignación más cercana)
+TRI ..> BRI : solicita despacho de brigada
+BRI ..> NOT : usa INotificadorEmergencias\n(Alerta radial/móvil)
+
+note bottom of COM
+  Regla Arquitectónica (ADR-001):
+  1. Todos los módulos dependen de 'compartido', pero 'compartido' no depende de ninguno.
+  2. Ingesta NO depende sincrónicamente de Triaje ni GIS (desacoplado por buffer Redis).
+  3. No existen dependencias cíclicas entre módulos (Grafo Dirigido Acíclico - DAG).
+end note
+
+@enduml
