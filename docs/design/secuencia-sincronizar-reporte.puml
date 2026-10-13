@@ -1,0 +1,82 @@
+@startuml secuencia-sincronizar-reporte
+skinparam shadowing false
+skinparam defaultFontName "Liberation Sans", Arial, sans-serif
+skinparam sequenceMessageAlign center
+skinparam roundcorner 5
+skinparam sequenceLifeLineBorderColor #1A3A5C
+skinparam sequenceGroupBorderColor #1A3A5C
+skinparam sequenceGroupHeaderFontStyle bold
+
+title SismoReporta AQP — Secuencia: Envío Offline y Sincronización Diferida (E2)
+
+autonumber
+actor "Ciudadano Afectado" as Ciu
+participant "PWA Cliente\n(IndexedDB)" as UI
+participant "SyncController\n(FastAPI)" as API
+participant "ServicioSincronizacion" as S
+participant "Reporte" as R
+participant "IRepositorioReportes\n(PostgresAdapter)" as DB
+participant "IBrokerCola\n(RedisAdapter)" as Q
+participant "INotificadorEmergencias" as N
+
+== Fase 1: Registro Offline Local en Cliente ==
+Ciu -> UI : Registrar reporte con foto y GPS (Sin Señal)
+activate UI
+UI -> UI : Comprimir foto (Canvas API < 500KB)
+UI -> UI : Generar UUID local y guardar en IndexedDB
+note right of UI : Estado = ENCOLADO en navegador\n(Persistencia local resiliente)
+UI --> Ciu : "Reporte resguardado en su teléfono.\nSe enviará automáticamente con señal."
+deactivate UI
+
+== Fase 2: Detección de Conexión y Sincronización Diferida ==
+... Pasa el tiempo, el dispositivo detecta señal celular (evento 'online') ...
+
+UI -> API : POST /api/v1/ingesta/sync (Lote de Reportes)
+activate UI
+activate API
+
+API -> S : procesarLoteOffline(reportes)
+activate S
+
+loop por cada reporte en el lote
+    S -> S : validarGeocerca(reporte.coordenadas)
+    
+    alt Coordenadas válidas en Arequipa
+        S -> R : sincronizar(fechaActual)
+        activate R
+        note right of R : Transición de estado:\nENCOLADO -> RECIBIDO
+        R --> S : estado actualizado (RECIBIDO)
+        deactivate R
+        
+        S -> DB : guardar(reporte)
+        activate DB
+        DB --> S : confirmación de persistencia ACID
+        deactivate DB
+        
+        S ->> Q : encolarReporte("cola:triaje", payloadJson)
+        note right of Q : Mensaje Asíncrono (->>)\nBuffer Redis: no bloquea HTTP (Ack rápido)
+        
+        opt Severidad == CATASTROFICA
+            S ->> N : enviarAlertaZonal(distrito, "Incidente Crítico Reportado")
+            note right of N : Notificación asíncrona inmediata al COE
+        end
+        
+    else Coordenadas fuera de la geocerca de Arequipa
+        S -> R : descartar("Ubicación fuera del área de cobertura")
+        activate R
+        R --> S : estado = DESCARTADO
+        deactivate R
+    end
+end
+
+S --> API : totalSincronizados (202 Accepted)
+deactivate S
+
+API --> UI : HTTP 202 Accepted { sincronizados: N, status: "OK" }
+deactivate API
+
+UI -> UI : Marcar registros locales como RECIBIDOS en IndexedDB
+UI --> Ciu : Notificación Push: "Su reporte fue recibido por Defensa Civil."
+deactivate UI
+
+@enduml
