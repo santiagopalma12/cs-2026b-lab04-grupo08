@@ -1,0 +1,53 @@
+@startuml
+title <size:24>Container View: SismoReporta AQP</size>\n<size:24>Diagrama de Contenedores de SismoReporta AQP (Nivel 2 C4) detallando aplicaciones, bases de datos y protocolos de comunicación.</size>
+
+set separator none
+left to right direction
+
+<style>
+  root {
+    BackgroundColor: #ffffff
+    FontColor: #444444
+  }
+</style>
+
+!include <C4/C4>
+!include <C4/C4_Context>
+!include <C4/C4_Container>
+
+Person(CiudadanoAfectado, "Ciudadano Afectado", $descr="Habitante de la región Arequipa que reporta daños estructurales, personas atrapadas o vías colapsadas mediante fotografías y GPS.", $tags="", $link="")
+Person(BrigadistaenCampo, "Brigadista en Campo", $descr="Personal de rescate (Bomberos, Cruz Roja, Defensa Civil) que recibe órdenes de auxilio y actualiza la atención de víctimas en tiempo real.", $tags="", $link="")
+Person(CoordinadordelCOE, "Coordinador del COE", $descr="Operador de Defensa Civil y COE que evalúa el mapa de calor de incidentes, prioriza severidades críticas y despacha brigadas de rescate.", $tags="", $link="")
+System(ServiciodeMapasyTeselas, "Servicio de Mapas y Teselas", $descr="Servicio externo de cartografía base y geocodificación (OpenStreetMap / Mapbox Tiles).", $tags="", $link="")
+System(PasareladeAlertasSMSBroadcast, "Pasarela de Alertas SMS / Broadcast", $descr="Servicio externo de telecomunicaciones para difusión masiva de alertas tempranas y órdenes de evacuación.", $tags="", $link="")
+
+System_Boundary("SismoReportaAQP_boundary", "SismoReporta AQP", $tags="") {
+  Container(SismoReportaAQP.APIBackendMonolítico, "API Backend Monolítico", $techn="Python, FastAPI, Pydantic, Uvicorn", $descr="Núcleo monolítico modular en Python que procesa endpoints REST, gestiona conexiones WebSocket y orquesta la ingesta rápida.", $tags="", $link="")
+  ContainerDb(SismoReportaAQP.BufferyBrokerdeColas, "Buffer y Broker de Colas", $techn="Redis 7", $descr="Buffer volátil en memoria para absorber picos extremos de ingesta y broker de colas para tareas en background.", $tags="", $link="")
+  Container(SismoReportaAQP.WorkerdeProcesamientoAsíncrono, "Worker de Procesamiento Asíncrono", $techn="Python, Celery", $descr="Procesos en segundo plano (Celery) que ejecutan compresión de fotos, triaje diferido y deduplicación espacial.", $tags="", $link="")
+  ContainerDb(SismoReportaAQP.BasedeDatosGeoespacial, "Base de Datos Geoespacial", $techn="PostgreSQL 16, PostGIS", $descr="Motor de base de datos relacional con extensión geoespacial para almacenamiento persistente y consultas espaciales.", $tags="", $link="")
+  ContainerDb(SismoReportaAQP.AlmacéndeObjetosMultimedia, "Almacén de Objetos Multimedia", $techn="MinIO S3", $descr="Servicio de almacenamiento compatible con S3 para custodia de fotografías de colapsos estructurales optimizadas.", $tags="", $link="")
+  Container(SismoReportaAQP.PWAClienteOffline, "PWA Cliente Offline", $techn="TypeScript, React, PWA, IndexedDB", $descr="Aplicación Web Progresiva para smartphones con persistencia local en IndexedDB y compresión de fotos en el cliente.", $tags="", $link="")
+  Container(SismoReportaAQP.TableroWebCOE, "Tablero Web COE", $techn="TypeScript, React, Leaflet, WebSockets", $descr="Panel de mando web para operadores del COE con visualización cartográfica en tiempo real y consola de asignación de brigadas.", $tags="", $link="")
+  Container(SismoReportaAQP.ProxyPerimetralNginx, "Proxy Perimetral Nginx", $techn="Nginx, Linux", $descr="Reverse proxy perimetral con terminación TLS, compresión HTTP y rate limiting para protección contra sobrecarga.", $tags="", $link="")
+}
+
+Rel(CiudadanoAfectado, SismoReportaAQP.PWAClienteOffline, "Registra incidentes con fotos y GPS localmente en", $techn="GUI táctil", $tags="", $link="")
+Rel(BrigadistaenCampo, SismoReportaAQP.PWAClienteOffline, "Consulta asignaciones y actualiza progreso de atención en", $techn="GUI táctil", $tags="", $link="")
+Rel(CoordinadordelCOE, SismoReportaAQP.TableroWebCOE, "Supervisa incidentes georreferenciados y coordina brigadas en", $techn="GUI web", $tags="", $link="")
+Rel(SismoReportaAQP.PWAClienteOffline, SismoReportaAQP.ProxyPerimetralNginx, "Sincroniza reportes diferidos y consulta avisos de emergencia vía", $techn="HTTPS/JSON", $tags="", $link="")
+Rel(SismoReportaAQP.TableroWebCOE, SismoReportaAQP.ProxyPerimetralNginx, "Consume endpoints analíticos y recibe incidentes en vivo vía", $techn="HTTPS/WSS", $tags="", $link="")
+Rel(SismoReportaAQP.ProxyPerimetralNginx, SismoReportaAQP.APIBackendMonolítico, "Redirige peticiones validadas e interconexión de sockets hacia", $techn="HTTP/ReverseProxy", $tags="", $link="")
+Rel(SismoReportaAQP.APIBackendMonolítico, SismoReportaAQP.BufferyBrokerdeColas, "Encola eventos de triaje diferido y almacena caché de mapa de calor en", $techn="Redis Protocol (RESP)", $tags="", $link="")
+Rel(SismoReportaAQP.APIBackendMonolítico, SismoReportaAQP.BasedeDatosGeoespacial, "Lee y persiste incidentes, usuarios y metadatos geoespaciales en", $techn="SQL/TCP", $tags="", $link="")
+Rel(SismoReportaAQP.WorkerdeProcesamientoAsíncrono, SismoReportaAQP.BufferyBrokerdeColas, "Consume tareas de la cola de triaje y procesamiento diferido desde", $techn="Redis Protocol (RESP)", $tags="", $link="")
+Rel(SismoReportaAQP.WorkerdeProcesamientoAsíncrono, SismoReportaAQP.BasedeDatosGeoespacial, "Ejecuta clustering espacial de reportes y actualiza severidades en", $techn="SQL/TCP", $tags="", $link="")
+Rel(SismoReportaAQP.WorkerdeProcesamientoAsíncrono, SismoReportaAQP.AlmacéndeObjetosMultimedia, "Almacena fotografías comprimidas de evidencias en", $techn="S3 API (HTTPS)", $tags="", $link="")
+Rel(SismoReportaAQP.WorkerdeProcesamientoAsíncrono, PasareladeAlertasSMSBroadcast, "Solicita emisión masiva de alertas zonales a", $techn="HTTPS/REST", $tags="", $link="")
+Rel(SismoReportaAQP.PWAClienteOffline, ServiciodeMapasyTeselas, "Carga capas de mapas vectoriales y teselas desde", $techn="HTTPS/Tiles", $tags="", $link="")
+Rel(SismoReportaAQP.TableroWebCOE, ServiciodeMapasyTeselas, "Carga mapas base satelitales y capas urbanas desde", $techn="HTTPS/Tiles", $tags="", $link="")
+Rel(SismoReportaAQP.APIBackendMonolítico, PasareladeAlertasSMSBroadcast, "Emite mensajes de difusión masiva ante alertas extremas vía", $techn="HTTPS/REST", $tags="", $link="")
+
+SHOW_LEGEND(true)
+hide stereotypes
+@enduml

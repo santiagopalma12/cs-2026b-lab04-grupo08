@@ -1,0 +1,55 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["Container View: SismoReporta AQP"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    1["<div style='font-weight: bold'>Ciudadano Afectado</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Habitante de la región<br />Arequipa que reporta daños<br />estructurales, personas<br />atrapadas o vías colapsadas<br />mediante fotografías y GPS.</div>"]
+    style 1 fill:#08427b,stroke:#052e56,color:#ffffff
+    2["<div style='font-weight: bold'>Brigadista en Campo</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Personal de rescate<br />(Bomberos, Cruz Roja, Defensa<br />Civil) que recibe órdenes de<br />auxilio y actualiza la<br />atención de víctimas en<br />tiempo real.</div>"]
+    style 2 fill:#08427b,stroke:#052e56,color:#ffffff
+    3["<div style='font-weight: bold'>Coordinador del COE</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Operador de Defensa Civil y<br />COE que evalúa el mapa de<br />calor de incidentes, prioriza<br />severidades críticas y<br />despacha brigadas de rescate.</div>"]
+    style 3 fill:#08427b,stroke:#052e56,color:#ffffff
+    4["<div style='font-weight: bold'>Servicio de Mapas y Teselas</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Servicio externo de<br />cartografía base y<br />geocodificación<br />(OpenStreetMap / Mapbox<br />Tiles).</div>"]
+    style 4 fill:#999999,stroke:#6b6b6b,color:#ffffff
+    5["<div style='font-weight: bold'>Pasarela de Alertas SMS / Broadcast</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Servicio externo de<br />telecomunicaciones para<br />difusión masiva de alertas<br />tempranas y órdenes de<br />evacuación.</div>"]
+    style 5 fill:#999999,stroke:#6b6b6b,color:#ffffff
+
+    subgraph 6 ["SismoReporta AQP"]
+      style 6 fill:#ffffff,stroke:#0b4884,color:#0b4884
+
+      10["<div style='font-weight: bold'>API Backend Monolítico</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python, FastAPI, Pydantic, Uvicorn]</div><div style='font-size: 80%; margin-top:10px'>Núcleo monolítico modular en<br />Python que procesa endpoints<br />REST, gestiona conexiones<br />WebSocket y orquesta la<br />ingesta rápida.</div>"]
+      style 10 fill:#438dd5,stroke:#2e6295,color:#ffffff
+      17[("<div style='font-weight: bold'>Buffer y Broker de Colas</div><div style='font-size: 70%; margin-top: 0px'>[Container: Redis 7]</div><div style='font-size: 80%; margin-top:10px'>Buffer volátil en memoria<br />para absorber picos extremos<br />de ingesta y broker de colas<br />para tareas en background.</div>")]
+      style 17 fill:#438dd5,stroke:#2e6295,color:#ffffff
+      18["<div style='font-weight: bold'>Worker de Procesamiento Asíncrono</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python, Celery]</div><div style='font-size: 80%; margin-top:10px'>Procesos en segundo plano<br />(Celery) que ejecutan<br />compresión de fotos, triaje<br />diferido y deduplicación<br />espacial.</div>"]
+      style 18 fill:#438dd5,stroke:#2e6295,color:#ffffff
+      19[("<div style='font-weight: bold'>Base de Datos Geoespacial</div><div style='font-size: 70%; margin-top: 0px'>[Container: PostgreSQL 16, PostGIS]</div><div style='font-size: 80%; margin-top:10px'>Motor de base de datos<br />relacional con extensión<br />geoespacial para<br />almacenamiento persistente y<br />consultas espaciales.</div>")]
+      style 19 fill:#438dd5,stroke:#2e6295,color:#ffffff
+      20[("<div style='font-weight: bold'>Almacén de Objetos Multimedia</div><div style='font-size: 70%; margin-top: 0px'>[Container: MinIO S3]</div><div style='font-size: 80%; margin-top:10px'>Servicio de almacenamiento<br />compatible con S3 para<br />custodia de fotografías de<br />colapsos estructurales<br />optimizadas.</div>")]
+      style 20 fill:#438dd5,stroke:#2e6295,color:#ffffff
+      7["<div style='font-weight: bold'>PWA Cliente Offline</div><div style='font-size: 70%; margin-top: 0px'>[Container: TypeScript, React, PWA, IndexedDB]</div><div style='font-size: 80%; margin-top:10px'>Aplicación Web Progresiva<br />para smartphones con<br />persistencia local en<br />IndexedDB y compresión de<br />fotos en el cliente.</div>"]
+      style 7 fill:#438dd5,stroke:#2e6295,color:#ffffff
+      8["<div style='font-weight: bold'>Tablero Web COE</div><div style='font-size: 70%; margin-top: 0px'>[Container: TypeScript, React, Leaflet, WebSockets]</div><div style='font-size: 80%; margin-top:10px'>Panel de mando web para<br />operadores del COE con<br />visualización cartográfica en<br />tiempo real y consola de<br />asignación de brigadas.</div>"]
+      style 8 fill:#438dd5,stroke:#2e6295,color:#ffffff
+      9["<div style='font-weight: bold'>Proxy Perimetral Nginx</div><div style='font-size: 70%; margin-top: 0px'>[Container: Nginx, Linux]</div><div style='font-size: 80%; margin-top:10px'>Reverse proxy perimetral con<br />terminación TLS, compresión<br />HTTP y rate limiting para<br />protección contra sobrecarga.</div>"]
+      style 9 fill:#438dd5,stroke:#2e6295,color:#ffffff
+    end
+
+    1-. "<div>Registra incidentes con fotos<br />y GPS localmente en</div><div style='font-size: 70%'>[GUI táctil]</div>" .->7
+    2-. "<div>Consulta asignaciones y<br />actualiza progreso de<br />atención en</div><div style='font-size: 70%'>[GUI táctil]</div>" .->7
+    3-. "<div>Supervisa incidentes<br />georreferenciados y coordina<br />brigadas en</div><div style='font-size: 70%'>[GUI web]</div>" .->8
+    7-. "<div>Sincroniza reportes diferidos<br />y consulta avisos de<br />emergencia vía</div><div style='font-size: 70%'>[HTTPS/JSON]</div>" .->9
+    8-. "<div>Consume endpoints analíticos<br />y recibe incidentes en vivo<br />vía</div><div style='font-size: 70%'>[HTTPS/WSS]</div>" .->9
+    9-. "<div>Redirige peticiones validadas<br />e interconexión de sockets<br />hacia</div><div style='font-size: 70%'>[HTTP/ReverseProxy]</div>" .->10
+    10-. "<div>Encola eventos de triaje<br />diferido y almacena caché de<br />mapa de calor en</div><div style='font-size: 70%'>[Redis Protocol (RESP)]</div>" .->17
+    10-. "<div>Lee y persiste incidentes,<br />usuarios y metadatos<br />geoespaciales en</div><div style='font-size: 70%'>[SQL/TCP]</div>" .->19
+    18-. "<div>Consume tareas de la cola de<br />triaje y procesamiento<br />diferido desde</div><div style='font-size: 70%'>[Redis Protocol (RESP)]</div>" .->17
+    18-. "<div>Ejecuta clustering espacial<br />de reportes y actualiza<br />severidades en</div><div style='font-size: 70%'>[SQL/TCP]</div>" .->19
+    18-. "<div>Almacena fotografías<br />comprimidas de evidencias en</div><div style='font-size: 70%'>[S3 API (HTTPS)]</div>" .->20
+    18-. "<div>Solicita emisión masiva de<br />alertas zonales a</div><div style='font-size: 70%'>[HTTPS/REST]</div>" .->5
+    7-. "<div>Carga capas de mapas<br />vectoriales y teselas desde</div><div style='font-size: 70%'>[HTTPS/Tiles]</div>" .->4
+    8-. "<div>Carga mapas base satelitales<br />y capas urbanas desde</div><div style='font-size: 70%'>[HTTPS/Tiles]</div>" .->4
+    10-. "<div>Emite mensajes de difusión<br />masiva ante alertas extremas<br />vía</div><div style='font-size: 70%'>[HTTPS/REST]</div>" .->5
+
+  end
