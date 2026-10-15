@@ -1,0 +1,49 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["Component View: SismoReporta AQP - API Backend Monolítico"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    5["<div style='font-weight: bold'>Pasarela de Alertas SMS / Broadcast</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Servicio externo de<br />telecomunicaciones para<br />difusión masiva de alertas<br />tempranas y órdenes de<br />evacuación.</div>"]
+    style 5 fill:#999999,stroke:#6b6b6b,color:#ffffff
+
+    subgraph 6 ["SismoReporta AQP"]
+      style 6 fill:#ffffff,stroke:#0b4884,color:#0b4884
+
+      subgraph 10 ["API Backend Monolítico"]
+        style 10 fill:#ffffff,stroke:#2e6295,color:#2e6295
+
+        11["<div style='font-weight: bold'>Componente de Ingesta y Sincronización</div><div style='font-size: 70%; margin-top: 0px'>[Component: FastAPI, Pydantic]</div><div style='font-size: 80%; margin-top:10px'>Controlador REST y servicio<br />de ingesta que valida<br />geocercas, esquemas<br />sintácticos y emite<br />confirmaciones HTTP 202<br />inmediatas.</div>"]
+        style 11 fill:#85bbf0,stroke:#5d82a8,color:#000000
+        12["<div style='font-weight: bold'>Componente de Triaje y Severidad</div><div style='font-size: 70%; margin-top: 0px'>[Component: Python]</div><div style='font-size: 80%; margin-top:10px'>Motor analítico de evaluación<br />de gravedad estructural,<br />colapsos y clasificación de<br />criticidad.</div>"]
+        style 12 fill:#85bbf0,stroke:#5d82a8,color:#000000
+        13["<div style='font-weight: bold'>Componente de Despacho y Brigadas</div><div style='font-size: 70%; margin-top: 0px'>[Component: Python]</div><div style='font-size: 80%; margin-top:10px'>Algoritmo de asignación<br />geodésica de brigadas de<br />auxilio según proximidad<br />espacial y disponibilidad.</div>"]
+        style 13 fill:#85bbf0,stroke:#5d82a8,color:#000000
+        14["<div style='font-weight: bold'>Componente de Servicios GIS</div><div style='font-size: 70%; margin-top: 0px'>[Component: Python, GeoAlchemy2]</div><div style='font-size: 80%; margin-top:10px'>Servicio geoespacial para<br />cálculo de distancias<br />geodésicas, clustering y mapa<br />de calor con funciones<br />PostGIS.</div>"]
+        style 14 fill:#85bbf0,stroke:#5d82a8,color:#000000
+        15["<div style='font-weight: bold'>Componente de Notificaciones</div><div style='font-size: 70%; margin-top: 0px'>[Component: Python, WebSockets]</div><div style='font-size: 80%; margin-top:10px'>Emisor de alertas en tiempo<br />real vía WebSockets al COE y<br />despachador de eventos a la<br />pasarela de difusión masiva.</div>"]
+        style 15 fill:#85bbf0,stroke:#5d82a8,color:#000000
+        16["<div style='font-weight: bold'>Dominio Compartido y Tipos Base</div><div style='font-size: 70%; margin-top: 0px'>[Component: Python, Pydantic]</div><div style='font-size: 80%; margin-top:10px'>Entidades nucleares de<br />dominio (Reporte,<br />Coordenadas, FotoEvidencia,<br />Severidad) e interfaces de<br />abstracción.</div>"]
+        style 16 fill:#85bbf0,stroke:#5d82a8,color:#000000
+      end
+
+      17[("<div style='font-weight: bold'>Buffer y Broker de Colas</div><div style='font-size: 70%; margin-top: 0px'>[Container: Redis 7]</div><div style='font-size: 80%; margin-top:10px'>Buffer volátil en memoria<br />para absorber picos extremos<br />de ingesta y broker de colas<br />para tareas en background.</div>")]
+      style 17 fill:#438dd5,stroke:#2e6295,color:#ffffff
+      19[("<div style='font-weight: bold'>Base de Datos Geoespacial</div><div style='font-size: 70%; margin-top: 0px'>[Container: PostgreSQL 16, PostGIS]</div><div style='font-size: 80%; margin-top:10px'>Motor de base de datos<br />relacional con extensión<br />geoespacial para<br />almacenamiento persistente y<br />consultas espaciales.</div>")]
+      style 19 fill:#438dd5,stroke:#2e6295,color:#ffffff
+    end
+
+    11-. "<div>Instancia y valida entidades<br />Reporte y Coordenadas usando</div><div style='font-size: 70%'>[In-process]</div>" .->16
+    12-. "<div>Evalúa severidad sobre<br />entidades Reporte usando</div><div style='font-size: 70%'>[In-process]</div>" .->16
+    13-. "<div>Gestiona estados de Brigada y<br />asignaciones usando</div><div style='font-size: 70%'>[In-process]</div>" .->16
+    14-. "<div>Procesa entidades Coordenadas<br />y geometrías espaciales con</div><div style='font-size: 70%'>[In-process]</div>" .->16
+    15-. "<div>Estructura cargas de alerta<br />según tipos de</div><div style='font-size: 70%'>[In-process]</div>" .->16
+    11-. "<div>Encola ráfagas de incidentes<br />para fast ACK en</div><div style='font-size: 70%'>[Redis Protocol (RESP)]</div>" .->17
+    11-. "<div>Persiste incidentes iniciales<br />con estado RECIBIDO en</div><div style='font-size: 70%'>[SQL/TCP]</div>" .->19
+    12-. "<div>Consulta proximidad espacial<br />y deduplicación de incidentes<br />a</div><div style='font-size: 70%'>[In-process]</div>" .->14
+    12-. "<div>Solicita despacho inmediato<br />ante incidentes catastróficos<br />a</div><div style='font-size: 70%'>[In-process]</div>" .->13
+    13-. "<div>Consulta distancias<br />geodésicas de brigadas<br />disponibles a</div><div style='font-size: 70%'>[In-process]</div>" .->14
+    13-. "<div>Notifica asignación de<br />brigada a través de</div><div style='font-size: 70%'>[In-process]</div>" .->15
+    15-. "<div>Emite mensajes de difusión<br />masiva ante alertas extremas<br />vía</div><div style='font-size: 70%'>[HTTPS/REST]</div>" .->5
+
+  end

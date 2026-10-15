@@ -1,0 +1,50 @@
+@startuml
+title <size:24>Component View: SismoReporta AQP - API Backend Monolítico</size>\n<size:24>Diagrama de Componentes del API Backend Monolítico (Nivel 3 C4) coherente con los módulos de diseño del Lab 05.</size>
+
+set separator none
+left to right direction
+
+<style>
+  root {
+    BackgroundColor: #ffffff
+    FontColor: #444444
+  }
+</style>
+
+!include <C4/C4>
+!include <C4/C4_Context>
+!include <C4/C4_Container>
+!include <C4/C4_Component>
+
+System(PasareladeAlertasSMSBroadcast, "Pasarela de Alertas SMS / Broadcast", $descr="Servicio externo de telecomunicaciones para difusión masiva de alertas tempranas y órdenes de evacuación.", $tags="", $link="")
+
+System_Boundary("SismoReportaAQP_boundary", "SismoReporta AQP", $tags="") {
+  Container_Boundary("SismoReportaAQP.APIBackendMonolítico_boundary", "API Backend Monolítico", $tags="") {
+    Component(SismoReportaAQP.APIBackendMonolítico.ComponentedeIngestaySincronización, "Componente de Ingesta y Sincronización", $techn="FastAPI, Pydantic", $descr="Controlador REST y servicio de ingesta que valida geocercas, esquemas sintácticos y emite confirmaciones HTTP 202 inmediatas.", $tags="", $link="")
+    Component(SismoReportaAQP.APIBackendMonolítico.ComponentedeTriajeySeveridad, "Componente de Triaje y Severidad", $techn="Python", $descr="Motor analítico de evaluación de gravedad estructural, colapsos y clasificación de criticidad.", $tags="", $link="")
+    Component(SismoReportaAQP.APIBackendMonolítico.ComponentedeDespachoyBrigadas, "Componente de Despacho y Brigadas", $techn="Python", $descr="Algoritmo de asignación geodésica de brigadas de auxilio según proximidad espacial y disponibilidad.", $tags="", $link="")
+    Component(SismoReportaAQP.APIBackendMonolítico.ComponentedeServiciosGIS, "Componente de Servicios GIS", $techn="Python, GeoAlchemy2", $descr="Servicio geoespacial para cálculo de distancias geodésicas, clustering y mapa de calor con funciones PostGIS.", $tags="", $link="")
+    Component(SismoReportaAQP.APIBackendMonolítico.ComponentedeNotificaciones, "Componente de Notificaciones", $techn="Python, WebSockets", $descr="Emisor de alertas en tiempo real vía WebSockets al COE y despachador de eventos a la pasarela de difusión masiva.", $tags="", $link="")
+    Component(SismoReportaAQP.APIBackendMonolítico.DominioCompartidoyTiposBase, "Dominio Compartido y Tipos Base", $techn="Python, Pydantic", $descr="Entidades nucleares de dominio (Reporte, Coordenadas, FotoEvidencia, Severidad) e interfaces de abstracción.", $tags="", $link="")
+  }
+
+  ContainerDb(SismoReportaAQP.BufferyBrokerdeColas, "Buffer y Broker de Colas", $techn="Redis 7", $descr="Buffer volátil en memoria para absorber picos extremos de ingesta y broker de colas para tareas en background.", $tags="", $link="")
+  ContainerDb(SismoReportaAQP.BasedeDatosGeoespacial, "Base de Datos Geoespacial", $techn="PostgreSQL 16, PostGIS", $descr="Motor de base de datos relacional con extensión geoespacial para almacenamiento persistente y consultas espaciales.", $tags="", $link="")
+}
+
+Rel(SismoReportaAQP.APIBackendMonolítico.ComponentedeIngestaySincronización, SismoReportaAQP.APIBackendMonolítico.DominioCompartidoyTiposBase, "Instancia y valida entidades Reporte y Coordenadas usando", $techn="In-process", $tags="", $link="")
+Rel(SismoReportaAQP.APIBackendMonolítico.ComponentedeTriajeySeveridad, SismoReportaAQP.APIBackendMonolítico.DominioCompartidoyTiposBase, "Evalúa severidad sobre entidades Reporte usando", $techn="In-process", $tags="", $link="")
+Rel(SismoReportaAQP.APIBackendMonolítico.ComponentedeDespachoyBrigadas, SismoReportaAQP.APIBackendMonolítico.DominioCompartidoyTiposBase, "Gestiona estados de Brigada y asignaciones usando", $techn="In-process", $tags="", $link="")
+Rel(SismoReportaAQP.APIBackendMonolítico.ComponentedeServiciosGIS, SismoReportaAQP.APIBackendMonolítico.DominioCompartidoyTiposBase, "Procesa entidades Coordenadas y geometrías espaciales con", $techn="In-process", $tags="", $link="")
+Rel(SismoReportaAQP.APIBackendMonolítico.ComponentedeNotificaciones, SismoReportaAQP.APIBackendMonolítico.DominioCompartidoyTiposBase, "Estructura cargas de alerta según tipos de", $techn="In-process", $tags="", $link="")
+Rel(SismoReportaAQP.APIBackendMonolítico.ComponentedeIngestaySincronización, SismoReportaAQP.BufferyBrokerdeColas, "Encola ráfagas de incidentes para fast ACK en", $techn="Redis Protocol (RESP)", $tags="", $link="")
+Rel(SismoReportaAQP.APIBackendMonolítico.ComponentedeIngestaySincronización, SismoReportaAQP.BasedeDatosGeoespacial, "Persiste incidentes iniciales con estado RECIBIDO en", $techn="SQL/TCP", $tags="", $link="")
+Rel(SismoReportaAQP.APIBackendMonolítico.ComponentedeTriajeySeveridad, SismoReportaAQP.APIBackendMonolítico.ComponentedeServiciosGIS, "Consulta proximidad espacial y deduplicación de incidentes a", $techn="In-process", $tags="", $link="")
+Rel(SismoReportaAQP.APIBackendMonolítico.ComponentedeTriajeySeveridad, SismoReportaAQP.APIBackendMonolítico.ComponentedeDespachoyBrigadas, "Solicita despacho inmediato ante incidentes catastróficos a", $techn="In-process", $tags="", $link="")
+Rel(SismoReportaAQP.APIBackendMonolítico.ComponentedeDespachoyBrigadas, SismoReportaAQP.APIBackendMonolítico.ComponentedeServiciosGIS, "Consulta distancias geodésicas de brigadas disponibles a", $techn="In-process", $tags="", $link="")
+Rel(SismoReportaAQP.APIBackendMonolítico.ComponentedeDespachoyBrigadas, SismoReportaAQP.APIBackendMonolítico.ComponentedeNotificaciones, "Notifica asignación de brigada a través de", $techn="In-process", $tags="", $link="")
+Rel(SismoReportaAQP.APIBackendMonolítico.ComponentedeNotificaciones, PasareladeAlertasSMSBroadcast, "Emite mensajes de difusión masiva ante alertas extremas vía", $techn="HTTPS/REST", $tags="", $link="")
+
+SHOW_LEGEND(true)
+hide stereotypes
+@enduml
