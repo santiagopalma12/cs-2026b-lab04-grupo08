@@ -1,0 +1,41 @@
+@startuml
+title <size:24>Dynamic View: SismoReporta AQP</size>\n<size:24>Vista Dinámica C4 del flujo crítico de sincronización diferida masiva tras restablecimiento de red celular.</size>
+
+set separator none
+left to right direction
+
+<style>
+  root {
+    BackgroundColor: #ffffff
+    FontColor: #444444
+  }
+</style>
+
+!include <C4/C4>
+!include <C4/C4_Context>
+!include <C4/C4_Container>
+
+System_Boundary("SismoReportaAQP_boundary", "SismoReporta AQP", $tags="") {
+  Container(SismoReportaAQP.APIBackendMonolítico, "API Backend Monolítico", $techn="Python, FastAPI, Pydantic, Uvicorn", $descr="Núcleo monolítico modular en Python que procesa endpoints REST, gestiona conexiones WebSocket y orquesta la ingesta rápida.", $tags="", $link="")
+  ContainerDb(SismoReportaAQP.BufferyBrokerdeColas, "Buffer y Broker de Colas", $techn="Redis 7", $descr="Buffer volátil en memoria para absorber picos extremos de ingesta y broker de colas para tareas en background.", $tags="", $link="")
+  Container(SismoReportaAQP.WorkerdeProcesamientoAsíncrono, "Worker de Procesamiento Asíncrono", $techn="Python, Celery", $descr="Procesos en segundo plano (Celery) que ejecutan compresión de fotos, triaje diferido y deduplicación espacial.", $tags="", $link="")
+  ContainerDb(SismoReportaAQP.BasedeDatosGeoespacial, "Base de Datos Geoespacial", $techn="PostgreSQL 16, PostGIS", $descr="Motor de base de datos relacional con extensión geoespacial para almacenamiento persistente y consultas espaciales.", $tags="", $link="")
+  ContainerDb(SismoReportaAQP.AlmacéndeObjetosMultimedia, "Almacén de Objetos Multimedia", $techn="MinIO S3", $descr="Servicio de almacenamiento compatible con S3 para custodia de fotografías de colapsos estructurales optimizadas.", $tags="", $link="")
+  Container(SismoReportaAQP.PWAClienteOffline, "PWA Cliente Offline", $techn="TypeScript, React, PWA, IndexedDB", $descr="Aplicación Web Progresiva para smartphones con persistencia local en IndexedDB y compresión de fotos en el cliente.", $tags="", $link="")
+  Container(SismoReportaAQP.ProxyPerimetralNginx, "Proxy Perimetral Nginx", $techn="Nginx, Linux", $descr="Reverse proxy perimetral con terminación TLS, compresión HTTP y rate limiting para protección contra sobrecarga.", $tags="", $link="")
+}
+
+System(PasareladeAlertasSMSBroadcast, "Pasarela de Alertas SMS / Broadcast", $descr="Servicio externo de telecomunicaciones para difusión masiva de alertas tempranas y órdenes de evacuación.", $tags="", $link="")
+
+Rel(SismoReportaAQP.PWAClienteOffline, SismoReportaAQP.ProxyPerimetralNginx, "1: Sincroniza reportes diferidos y consulta avisos de emergencia vía", $techn="HTTPS/JSON", $tags="", $link="")
+Rel(SismoReportaAQP.ProxyPerimetralNginx, SismoReportaAQP.APIBackendMonolítico, "2: Redirige peticiones validadas e interconexión de sockets hacia", $techn="HTTP/ReverseProxy", $tags="", $link="")
+Rel(SismoReportaAQP.APIBackendMonolítico, SismoReportaAQP.BasedeDatosGeoespacial, "3: Lee y persiste incidentes, usuarios y metadatos geoespaciales en", $techn="SQL/TCP", $tags="", $link="")
+Rel(SismoReportaAQP.APIBackendMonolítico, SismoReportaAQP.BufferyBrokerdeColas, "4: Encola eventos de triaje diferido y almacena caché de mapa de calor en", $techn="Redis Protocol (RESP)", $tags="", $link="")
+Rel(SismoReportaAQP.WorkerdeProcesamientoAsíncrono, SismoReportaAQP.BufferyBrokerdeColas, "5: Consume tareas de la cola de triaje y procesamiento diferido desde", $techn="Redis Protocol (RESP)", $tags="", $link="")
+Rel(SismoReportaAQP.WorkerdeProcesamientoAsíncrono, SismoReportaAQP.BasedeDatosGeoespacial, "6: Ejecuta clustering espacial de reportes y actualiza severidades en", $techn="SQL/TCP", $tags="", $link="")
+Rel(SismoReportaAQP.WorkerdeProcesamientoAsíncrono, SismoReportaAQP.AlmacéndeObjetosMultimedia, "7: Almacena fotografías comprimidas de evidencias en", $techn="S3 API (HTTPS)", $tags="", $link="")
+Rel(SismoReportaAQP.WorkerdeProcesamientoAsíncrono, PasareladeAlertasSMSBroadcast, "8: Solicita emisión masiva de alertas zonales a", $techn="HTTPS/REST", $tags="", $link="")
+
+SHOW_LEGEND(true)
+hide stereotypes
+@enduml
