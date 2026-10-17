@@ -1,0 +1,98 @@
+@startuml
+title <size:24>Deployment View: SismoReporta AQP - Producción</size>\n<size:24>Vista de Despliegue en Producción (Nivel 4 C4) detallando nodos físicos, contenedores Docker y servicios externos.</size>
+
+set separator none
+left to right direction
+
+<style>
+  root {
+    BackgroundColor: #ffffff
+    FontColor: #444444
+  }
+</style>
+
+!include <C4/C4>
+!include <C4/C4_Context>
+!include <C4/C4_Container>
+!include <C4/C4_Deployment>
+
+Deployment_Node(Producción.SmartphonedelCiudadano, "Smartphone del Ciudadano", $type="Terminal Móvil", $descr="Dispositivo móvil Android / iOS de ciudadanos afectados en Arequipa.", $tags="", $link="") {
+  Deployment_Node(Producción.SmartphonedelCiudadano.NavegadorWebMóvil, "Navegador Web Móvil", $type="Motor Web", $descr="Chrome Mobile, Firefox Mobile o Safari con soporte PWA.", $tags="", $link="") {
+    Container(Producción.SmartphonedelCiudadano.NavegadorWebMóvil.PWAClienteOffline_1, "PWA Cliente Offline", $techn="TypeScript, React, PWA, IndexedDB", $descr="Aplicación Web Progresiva para smartphones con persistencia local en IndexedDB y compresión de fotos en el cliente.", $tags="", $link="")
+  }
+
+}
+
+Deployment_Node(Producción.TerminaldeCampodelBrigadista, "Terminal de Campo del Brigadista", $type="Terminal Móvil", $descr="Smartphone o tablet Android rugerizada con antena GPS de rescate.", $tags="", $link="") {
+  Deployment_Node(Producción.TerminaldeCampodelBrigadista.NavegadorWebPWARuntime, "Navegador Web / PWA Runtime", $type="Motor Web", $descr="Navegador web con geolocalización de alta precisión.", $tags="", $link="") {
+    Container(Producción.TerminaldeCampodelBrigadista.NavegadorWebPWARuntime.PWAClienteOffline_1, "PWA Cliente Offline", $techn="TypeScript, React, PWA, IndexedDB", $descr="Aplicación Web Progresiva para smartphones con persistencia local en IndexedDB y compresión de fotos en el cliente.", $tags="", $link="")
+  }
+
+}
+
+Deployment_Node(Producción.EstacióndeMandodelCOE, "Estación de Mando del COE", $type="Estación de Trabajo PC", $descr="Computador de escritorio en la sala de crisis de Defensa Civil Arequipa.", $tags="", $link="") {
+  Deployment_Node(Producción.EstacióndeMandodelCOE.NavegadorWebdeEscritorio, "Navegador Web de Escritorio", $type="Motor Web", $descr="Google Chrome / Mozilla Firefox actualizado.", $tags="", $link="") {
+    Container(Producción.EstacióndeMandodelCOE.NavegadorWebdeEscritorio.TableroWebCOE_1, "Tablero Web COE", $techn="TypeScript, React, Leaflet, WebSockets", $descr="Panel de mando web para operadores del COE con visualización cartográfica en tiempo real y consola de asignación de brigadas.", $tags="", $link="")
+  }
+
+}
+
+Deployment_Node(Producción.ServidorCloudVPS, "Servidor Cloud VPS", $type="Ubuntu Linux 24.04 LTS", $descr="Instancia en la nube (Hetzner Cloud CX32 / DigitalOcean Droplet, 4 vCPUs, 8 GB RAM, 80 GB NVMe SSD, coste estimado: $15 USD/mes acorde a drivers.md R-03).", $tags="", $link="") {
+  Deployment_Node(Producción.ServidorCloudVPS.DockerEngine, "Docker Engine", $type="Docker 26.x", $descr="Entorno de ejecución de contenedores gestionado con Docker Compose.", $tags="", $link="") {
+    Deployment_Node(Producción.ServidorCloudVPS.DockerEngine.ContenedorProxyNginx, "Contenedor: Proxy Nginx", $type="Docker Container", $descr="Servidor perimetral reverse proxy y terminación SSL.", $tags="", $link="") {
+      Container(Producción.ServidorCloudVPS.DockerEngine.ContenedorProxyNginx.ProxyPerimetralNginx_1, "Proxy Perimetral Nginx", $techn="Nginx, Linux", $descr="Reverse proxy perimetral con terminación TLS, compresión HTTP y rate limiting para protección contra sobrecarga.", $tags="", $link="")
+    }
+
+    Deployment_Node(Producción.ServidorCloudVPS.DockerEngine.ContenedorMonolitoBackend, "Contenedor: Monolito Backend", $type="Docker Container", $descr="Servidor de aplicación FastAPI gestionado con 4 workers Gunicorn.", $tags="", $link="") {
+      Container(Producción.ServidorCloudVPS.DockerEngine.ContenedorMonolitoBackend.APIBackendMonolítico_1, "API Backend Monolítico", $techn="Python, FastAPI, Pydantic, Uvicorn", $descr="Núcleo monolítico modular en Python que procesa endpoints REST, gestiona conexiones WebSocket y orquesta la ingesta rápida.", $tags="", $link="")
+    }
+
+    Deployment_Node(Producción.ServidorCloudVPS.DockerEngine.ContenedorWorkersCelery, "Contenedor: Workers Celery", $type="Docker Container", $descr="Procesos en segundo plano para tareas asíncronas y triaje.", $tags="", $link="") {
+      Container(Producción.ServidorCloudVPS.DockerEngine.ContenedorWorkersCelery.WorkerdeProcesamientoAsíncrono_1, "Worker de Procesamiento Asíncrono", $techn="Python, Celery", $descr="Procesos en segundo plano (Celery) que ejecutan compresión de fotos, triaje diferido y deduplicación espacial.", $tags="", $link="")
+    }
+
+    Deployment_Node(Producción.ServidorCloudVPS.DockerEngine.ContenedorRedisCacheQueue, "Contenedor: Redis Cache/Queue", $type="Docker Container", $descr="Instancia de Redis optimizada en memoria con política de desalojo volátil.", $tags="", $link="") {
+      ContainerDb(Producción.ServidorCloudVPS.DockerEngine.ContenedorRedisCacheQueue.BufferyBrokerdeColas_1, "Buffer y Broker de Colas", $techn="Redis 7", $descr="Buffer volátil en memoria para absorber picos extremos de ingesta y broker de colas para tareas en background.", $tags="", $link="")
+    }
+
+    Deployment_Node(Producción.ServidorCloudVPS.DockerEngine.ContenedorPostgreSQLPostGIS, "Contenedor: PostgreSQL + PostGIS", $type="Docker Container", $descr="Motor relacional con índices espaciales GiST en volúmenes persistentes.", $tags="", $link="") {
+      ContainerDb(Producción.ServidorCloudVPS.DockerEngine.ContenedorPostgreSQLPostGIS.BasedeDatosGeoespacial_1, "Base de Datos Geoespacial", $techn="PostgreSQL 16, PostGIS", $descr="Motor de base de datos relacional con extensión geoespacial para almacenamiento persistente y consultas espaciales.", $tags="", $link="")
+    }
+
+    Deployment_Node(Producción.ServidorCloudVPS.DockerEngine.ContenedorMinIOS3, "Contenedor: MinIO S3", $type="Docker Container", $descr="Almacenamiento de objetos local en volumen SSD para imágenes de daños.", $tags="", $link="") {
+      ContainerDb(Producción.ServidorCloudVPS.DockerEngine.ContenedorMinIOS3.AlmacéndeObjetosMultimedia_1, "Almacén de Objetos Multimedia", $techn="MinIO S3", $descr="Servicio de almacenamiento compatible con S3 para custodia de fotografías de colapsos estructurales optimizadas.", $tags="", $link="")
+    }
+
+  }
+
+}
+
+Deployment_Node(Producción.ServiciosExternosRedPública, "Servicios Externos / Red Pública", $type="Red Global", $descr="Infraestructura externa de proveedores SaaS y telecomunicaciones.", $tags="", $link="") {
+  Deployment_Node(Producción.ServiciosExternosRedPública.CDNdeOpenStreetMapMapbox, "CDN de OpenStreetMap / Mapbox", $type="Infraestructura Cloud CDN", $descr="Red de distribución de teselas cartográficas mundiales.", $tags="", $link="") {
+    System(Producción.ServiciosExternosRedPública.CDNdeOpenStreetMapMapbox.ServiciodeMapasyTeselas_1, "Servicio de Mapas y Teselas", $descr="Servicio externo de cartografía base y geocodificación (OpenStreetMap / Mapbox Tiles).", $tags="", $link="")
+  }
+
+  Deployment_Node(Producción.ServiciosExternosRedPública.PasareladeTelecomunicacionesSMS, "Pasarela de Telecomunicaciones SMS", $type="Gateway Telecom", $descr="Infraestructura de telecomunicaciones y difusión celular de emergencia.", $tags="", $link="") {
+    System(Producción.ServiciosExternosRedPública.PasareladeTelecomunicacionesSMS.PasareladeAlertasSMSBroadcast_1, "Pasarela de Alertas SMS / Broadcast", $descr="Servicio externo de telecomunicaciones para difusión masiva de alertas tempranas y órdenes de evacuación.", $tags="", $link="")
+  }
+
+}
+
+Rel(Producción.SmartphonedelCiudadano.NavegadorWebMóvil.PWAClienteOffline_1, Producción.ServidorCloudVPS.DockerEngine.ContenedorProxyNginx.ProxyPerimetralNginx_1, "Sincroniza reportes diferidos y consulta avisos de emergencia vía", $techn="HTTPS/JSON", $tags="", $link="")
+Rel(Producción.TerminaldeCampodelBrigadista.NavegadorWebPWARuntime.PWAClienteOffline_1, Producción.ServidorCloudVPS.DockerEngine.ContenedorProxyNginx.ProxyPerimetralNginx_1, "Sincroniza reportes diferidos y consulta avisos de emergencia vía", $techn="HTTPS/JSON", $tags="", $link="")
+Rel(Producción.EstacióndeMandodelCOE.NavegadorWebdeEscritorio.TableroWebCOE_1, Producción.ServidorCloudVPS.DockerEngine.ContenedorProxyNginx.ProxyPerimetralNginx_1, "Consume endpoints analíticos y recibe incidentes en vivo vía", $techn="HTTPS/WSS", $tags="", $link="")
+Rel(Producción.ServidorCloudVPS.DockerEngine.ContenedorProxyNginx.ProxyPerimetralNginx_1, Producción.ServidorCloudVPS.DockerEngine.ContenedorMonolitoBackend.APIBackendMonolítico_1, "Redirige peticiones validadas e interconexión de sockets hacia", $techn="HTTP/ReverseProxy", $tags="", $link="")
+Rel(Producción.ServidorCloudVPS.DockerEngine.ContenedorMonolitoBackend.APIBackendMonolítico_1, Producción.ServidorCloudVPS.DockerEngine.ContenedorRedisCacheQueue.BufferyBrokerdeColas_1, "Encola eventos de triaje diferido y almacena caché de mapa de calor en", $techn="Redis Protocol (RESP)", $tags="", $link="")
+Rel(Producción.ServidorCloudVPS.DockerEngine.ContenedorWorkersCelery.WorkerdeProcesamientoAsíncrono_1, Producción.ServidorCloudVPS.DockerEngine.ContenedorRedisCacheQueue.BufferyBrokerdeColas_1, "Consume tareas de la cola de triaje y procesamiento diferido desde", $techn="Redis Protocol (RESP)", $tags="", $link="")
+Rel(Producción.ServidorCloudVPS.DockerEngine.ContenedorMonolitoBackend.APIBackendMonolítico_1, Producción.ServidorCloudVPS.DockerEngine.ContenedorPostgreSQLPostGIS.BasedeDatosGeoespacial_1, "Lee y persiste incidentes, usuarios y metadatos geoespaciales en", $techn="SQL/TCP", $tags="", $link="")
+Rel(Producción.ServidorCloudVPS.DockerEngine.ContenedorWorkersCelery.WorkerdeProcesamientoAsíncrono_1, Producción.ServidorCloudVPS.DockerEngine.ContenedorPostgreSQLPostGIS.BasedeDatosGeoespacial_1, "Ejecuta clustering espacial de reportes y actualiza severidades en", $techn="SQL/TCP", $tags="", $link="")
+Rel(Producción.ServidorCloudVPS.DockerEngine.ContenedorWorkersCelery.WorkerdeProcesamientoAsíncrono_1, Producción.ServidorCloudVPS.DockerEngine.ContenedorMinIOS3.AlmacéndeObjetosMultimedia_1, "Almacena fotografías comprimidas de evidencias en", $techn="S3 API (HTTPS)", $tags="", $link="")
+Rel(Producción.SmartphonedelCiudadano.NavegadorWebMóvil.PWAClienteOffline_1, Producción.ServiciosExternosRedPública.CDNdeOpenStreetMapMapbox.ServiciodeMapasyTeselas_1, "Carga capas de mapas vectoriales y teselas desde", $techn="HTTPS/Tiles", $tags="", $link="")
+Rel(Producción.TerminaldeCampodelBrigadista.NavegadorWebPWARuntime.PWAClienteOffline_1, Producción.ServiciosExternosRedPública.CDNdeOpenStreetMapMapbox.ServiciodeMapasyTeselas_1, "Carga capas de mapas vectoriales y teselas desde", $techn="HTTPS/Tiles", $tags="", $link="")
+Rel(Producción.EstacióndeMandodelCOE.NavegadorWebdeEscritorio.TableroWebCOE_1, Producción.ServiciosExternosRedPública.CDNdeOpenStreetMapMapbox.ServiciodeMapasyTeselas_1, "Carga mapas base satelitales y capas urbanas desde", $techn="HTTPS/Tiles", $tags="", $link="")
+Rel(Producción.ServidorCloudVPS.DockerEngine.ContenedorMonolitoBackend.APIBackendMonolítico_1, Producción.ServiciosExternosRedPública.PasareladeTelecomunicacionesSMS.PasareladeAlertasSMSBroadcast_1, "Emite mensajes de difusión masiva ante alertas extremas vía", $techn="HTTPS/REST", $tags="", $link="")
+Rel(Producción.ServidorCloudVPS.DockerEngine.ContenedorWorkersCelery.WorkerdeProcesamientoAsíncrono_1, Producción.ServiciosExternosRedPública.PasareladeTelecomunicacionesSMS.PasareladeAlertasSMSBroadcast_1, "Solicita emisión masiva de alertas zonales a", $techn="HTTPS/REST", $tags="", $link="")
+
+SHOW_LEGEND(true)
+hide stereotypes
+@enduml

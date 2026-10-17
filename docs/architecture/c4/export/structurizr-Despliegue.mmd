@@ -1,0 +1,129 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["Deployment View: SismoReporta AQP - Producción"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    subgraph 53 ["Smartphone del Ciudadano"]
+      style 53 fill:#ffffff,stroke:#444444,color:#444444
+
+      subgraph 54 ["Navegador Web Móvil"]
+        style 54 fill:#ffffff,stroke:#444444,color:#444444
+
+        55["<div style='font-weight: bold'>PWA Cliente Offline</div><div style='font-size: 70%; margin-top: 0px'>[Container: TypeScript, React, PWA, IndexedDB]</div><div style='font-size: 80%; margin-top:10px'>Aplicación Web Progresiva<br />para smartphones con<br />persistencia local en<br />IndexedDB y compresión de<br />fotos en el cliente.</div>"]
+        style 55 fill:#438dd5,stroke:#2e6295,color:#ffffff
+      end
+
+    end
+
+    subgraph 56 ["Terminal de Campo del Brigadista"]
+      style 56 fill:#ffffff,stroke:#444444,color:#444444
+
+      subgraph 57 ["Navegador Web / PWA Runtime"]
+        style 57 fill:#ffffff,stroke:#444444,color:#444444
+
+        58["<div style='font-weight: bold'>PWA Cliente Offline</div><div style='font-size: 70%; margin-top: 0px'>[Container: TypeScript, React, PWA, IndexedDB]</div><div style='font-size: 80%; margin-top:10px'>Aplicación Web Progresiva<br />para smartphones con<br />persistencia local en<br />IndexedDB y compresión de<br />fotos en el cliente.</div>"]
+        style 58 fill:#438dd5,stroke:#2e6295,color:#ffffff
+      end
+
+    end
+
+    subgraph 59 ["Estación de Mando del COE"]
+      style 59 fill:#ffffff,stroke:#444444,color:#444444
+
+      subgraph 60 ["Navegador Web de Escritorio"]
+        style 60 fill:#ffffff,stroke:#444444,color:#444444
+
+        61["<div style='font-weight: bold'>Tablero Web COE</div><div style='font-size: 70%; margin-top: 0px'>[Container: TypeScript, React, Leaflet, WebSockets]</div><div style='font-size: 80%; margin-top:10px'>Panel de mando web para<br />operadores del COE con<br />visualización cartográfica en<br />tiempo real y consola de<br />asignación de brigadas.</div>"]
+        style 61 fill:#438dd5,stroke:#2e6295,color:#ffffff
+      end
+
+    end
+
+    subgraph 62 ["Servidor Cloud VPS"]
+      style 62 fill:#ffffff,stroke:#444444,color:#444444
+
+      subgraph 63 ["Docker Engine"]
+        style 63 fill:#ffffff,stroke:#444444,color:#444444
+
+        subgraph 64 ["Contenedor: Proxy Nginx"]
+          style 64 fill:#ffffff,stroke:#444444,color:#444444
+
+          65["<div style='font-weight: bold'>Proxy Perimetral Nginx</div><div style='font-size: 70%; margin-top: 0px'>[Container: Nginx, Linux]</div><div style='font-size: 80%; margin-top:10px'>Reverse proxy perimetral con<br />terminación TLS, compresión<br />HTTP y rate limiting para<br />protección contra sobrecarga.</div>"]
+          style 65 fill:#438dd5,stroke:#2e6295,color:#ffffff
+        end
+
+        subgraph 69 ["Contenedor: Monolito Backend"]
+          style 69 fill:#ffffff,stroke:#444444,color:#444444
+
+          70["<div style='font-weight: bold'>API Backend Monolítico</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python, FastAPI, Pydantic, Uvicorn]</div><div style='font-size: 80%; margin-top:10px'>Núcleo monolítico modular en<br />Python que procesa endpoints<br />REST, gestiona conexiones<br />WebSocket y orquesta la<br />ingesta rápida.</div>"]
+          style 70 fill:#438dd5,stroke:#2e6295,color:#ffffff
+        end
+
+        subgraph 72 ["Contenedor: Workers Celery"]
+          style 72 fill:#ffffff,stroke:#444444,color:#444444
+
+          73["<div style='font-weight: bold'>Worker de Procesamiento Asíncrono</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python, Celery]</div><div style='font-size: 80%; margin-top:10px'>Procesos en segundo plano<br />(Celery) que ejecutan<br />compresión de fotos, triaje<br />diferido y deduplicación<br />espacial.</div>"]
+          style 73 fill:#438dd5,stroke:#2e6295,color:#ffffff
+        end
+
+        subgraph 74 ["Contenedor: Redis Cache/Queue"]
+          style 74 fill:#ffffff,stroke:#444444,color:#444444
+
+          75[("<div style='font-weight: bold'>Buffer y Broker de Colas</div><div style='font-size: 70%; margin-top: 0px'>[Container: Redis 7]</div><div style='font-size: 80%; margin-top:10px'>Buffer volátil en memoria<br />para absorber picos extremos<br />de ingesta y broker de colas<br />para tareas en background.</div>")]
+          style 75 fill:#438dd5,stroke:#2e6295,color:#ffffff
+        end
+
+        subgraph 78 ["Contenedor: PostgreSQL + PostGIS"]
+          style 78 fill:#ffffff,stroke:#444444,color:#444444
+
+          79[("<div style='font-weight: bold'>Base de Datos Geoespacial</div><div style='font-size: 70%; margin-top: 0px'>[Container: PostgreSQL 16, PostGIS]</div><div style='font-size: 80%; margin-top:10px'>Motor de base de datos<br />relacional con extensión<br />geoespacial para<br />almacenamiento persistente y<br />consultas espaciales.</div>")]
+          style 79 fill:#438dd5,stroke:#2e6295,color:#ffffff
+        end
+
+        subgraph 82 ["Contenedor: MinIO S3"]
+          style 82 fill:#ffffff,stroke:#444444,color:#444444
+
+          83[("<div style='font-weight: bold'>Almacén de Objetos Multimedia</div><div style='font-size: 70%; margin-top: 0px'>[Container: MinIO S3]</div><div style='font-size: 80%; margin-top:10px'>Servicio de almacenamiento<br />compatible con S3 para<br />custodia de fotografías de<br />colapsos estructurales<br />optimizadas.</div>")]
+          style 83 fill:#438dd5,stroke:#2e6295,color:#ffffff
+        end
+
+      end
+
+    end
+
+    subgraph 85 ["Servicios Externos / Red Pública"]
+      style 85 fill:#ffffff,stroke:#444444,color:#444444
+
+      subgraph 86 ["CDN de OpenStreetMap / Mapbox"]
+        style 86 fill:#ffffff,stroke:#444444,color:#444444
+
+        87["<div style='font-weight: bold'>Servicio de Mapas y Teselas</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Servicio externo de<br />cartografía base y<br />geocodificación<br />(OpenStreetMap / Mapbox<br />Tiles).</div>"]
+        style 87 fill:#999999,stroke:#6b6b6b,color:#ffffff
+      end
+
+      subgraph 91 ["Pasarela de Telecomunicaciones SMS"]
+        style 91 fill:#ffffff,stroke:#444444,color:#444444
+
+        92["<div style='font-weight: bold'>Pasarela de Alertas SMS / Broadcast</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Servicio externo de<br />telecomunicaciones para<br />difusión masiva de alertas<br />tempranas y órdenes de<br />evacuación.</div>"]
+        style 92 fill:#999999,stroke:#6b6b6b,color:#ffffff
+      end
+
+    end
+
+    55-. "<div>Sincroniza reportes diferidos<br />y consulta avisos de<br />emergencia vía</div><div style='font-size: 70%'>[HTTPS/JSON]</div>" .->65
+    58-. "<div>Sincroniza reportes diferidos<br />y consulta avisos de<br />emergencia vía</div><div style='font-size: 70%'>[HTTPS/JSON]</div>" .->65
+    61-. "<div>Consume endpoints analíticos<br />y recibe incidentes en vivo<br />vía</div><div style='font-size: 70%'>[HTTPS/WSS]</div>" .->65
+    65-. "<div>Redirige peticiones validadas<br />e interconexión de sockets<br />hacia</div><div style='font-size: 70%'>[HTTP/ReverseProxy]</div>" .->70
+    70-. "<div>Encola eventos de triaje<br />diferido y almacena caché de<br />mapa de calor en</div><div style='font-size: 70%'>[Redis Protocol (RESP)]</div>" .->75
+    73-. "<div>Consume tareas de la cola de<br />triaje y procesamiento<br />diferido desde</div><div style='font-size: 70%'>[Redis Protocol (RESP)]</div>" .->75
+    70-. "<div>Lee y persiste incidentes,<br />usuarios y metadatos<br />geoespaciales en</div><div style='font-size: 70%'>[SQL/TCP]</div>" .->79
+    73-. "<div>Ejecuta clustering espacial<br />de reportes y actualiza<br />severidades en</div><div style='font-size: 70%'>[SQL/TCP]</div>" .->79
+    73-. "<div>Almacena fotografías<br />comprimidas de evidencias en</div><div style='font-size: 70%'>[S3 API (HTTPS)]</div>" .->83
+    55-. "<div>Carga capas de mapas<br />vectoriales y teselas desde</div><div style='font-size: 70%'>[HTTPS/Tiles]</div>" .->87
+    58-. "<div>Carga capas de mapas<br />vectoriales y teselas desde</div><div style='font-size: 70%'>[HTTPS/Tiles]</div>" .->87
+    61-. "<div>Carga mapas base satelitales<br />y capas urbanas desde</div><div style='font-size: 70%'>[HTTPS/Tiles]</div>" .->87
+    70-. "<div>Emite mensajes de difusión<br />masiva ante alertas extremas<br />vía</div><div style='font-size: 70%'>[HTTPS/REST]</div>" .->92
+    73-. "<div>Solicita emisión masiva de<br />alertas zonales a</div><div style='font-size: 70%'>[HTTPS/REST]</div>" .->92
+
+  end
