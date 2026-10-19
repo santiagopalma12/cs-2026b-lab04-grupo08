@@ -1,0 +1,32 @@
+@startuml
+title <size:24>System Context View: SismoReporta AQP</size>\n<size:24>Diagrama de Contexto de SismoReporta AQP (Nivel 1 C4) mostrando los actores y límites del sistema.</size>
+
+set separator none
+left to right direction
+
+<style>
+  root {
+    BackgroundColor: #ffffff
+    FontColor: #444444
+  }
+</style>
+
+!include <C4/C4>
+!include <C4/C4_Context>
+
+Person(CiudadanoAfectado, "Ciudadano Afectado", $descr="Habitante de la región Arequipa que reporta daños estructurales, personas atrapadas o vías colapsadas mediante fotografías y GPS.", $tags="", $link="")
+Person(BrigadistaenCampo, "Brigadista en Campo", $descr="Personal de rescate (Bomberos, Cruz Roja, Defensa Civil) que recibe órdenes de auxilio y actualiza la atención de víctimas en tiempo real.", $tags="", $link="")
+Person(CoordinadordelCOE, "Coordinador del COE", $descr="Operador de Defensa Civil y COE que evalúa el mapa de calor de incidentes, prioriza severidades críticas y despacha brigadas de rescate.", $tags="", $link="")
+System(ServiciodeMapasyTeselas, "Servicio de Mapas y Teselas", $descr="Servicio externo de cartografía base y geocodificación (OpenStreetMap / Mapbox Tiles).", $tags="", $link="")
+System(PasareladeAlertasSMSBroadcast, "Pasarela de Alertas SMS / Broadcast", $descr="Servicio externo de telecomunicaciones para difusión masiva de alertas tempranas y órdenes de evacuación.", $tags="", $link="")
+System(SismoReportaAQP, "SismoReporta AQP", $descr="Plataforma ciudadana y de coordinación de emergencias post-sismo con soporte de funcionamiento sin conexión y sincronización diferida masiva.", $tags="", $link="")
+
+Rel(CiudadanoAfectado, SismoReportaAQP, "Registra reportes de daños estructurales y personas atrapadas en", $techn="", $tags="", $link="")
+Rel(BrigadistaenCampo, SismoReportaAQP, "Consulta órdenes de auxilio y actualiza estado de rescate en", $techn="", $tags="", $link="")
+Rel(CoordinadordelCOE, SismoReportaAQP, "Monitorea mapa de calor y despacha cuadrillas de rescate desde", $techn="", $tags="", $link="")
+Rel(SismoReportaAQP, ServiciodeMapasyTeselas, "Descarga teselas y capas cartográficas base desde", $techn="HTTPS/Tiles", $tags="", $link="")
+Rel(SismoReportaAQP, PasareladeAlertasSMSBroadcast, "Emite órdenes de evacuación y alertas masivas a través de", $techn="HTTPS/REST", $tags="", $link="")
+
+SHOW_LEGEND(true)
+hide stereotypes
+@enduml

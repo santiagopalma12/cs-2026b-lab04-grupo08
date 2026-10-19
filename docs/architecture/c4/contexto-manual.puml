@@ -1,0 +1,24 @@
+@startuml contexto-manual
+!include <C4/C4_Context>
+skinparam dpi 180
+LAYOUT_LEFT_RIGHT()
+
+title SismoReporta AQP — Diagrama de Contexto del Sistema (C4-PlantUML Escrito a Mano)
+
+Person(ciudadano, "Ciudadano Afectado", "Habitante de la región Arequipa que experimenta el sismo y registra reportes de colapsos estructurales o personas atrapadas.")
+Person(brigadista, "Brigadista en Campo", "Personal de rescate (Bomberos, Cruz Roja, Defensa Civil) que atiende a víctimas y actualiza el estado de las misiones.")
+Person(coordinador, "Coordinador del COE", "Operador de Defensa Civil y COE que evalúa el mapa de calor, prioriza emergencias y despacha brigadas de rescate.")
+
+System(sismoReporta, "SismoReporta AQP", "Plataforma de gestión y coordinación de emergencias post-sismo con soporte de funcionamiento sin conexión y sincronización diferida.")
+
+System_Ext(servicioMapas, "Servicio de Mapas y Teselas", "Proveedor externo de cartografía base y geocodificación (OpenStreetMap / Mapbox Tiles).")
+System_Ext(pasarelaSms, "Pasarela de Alertas SMS / Broadcast", "Servicio externo de telecomunicaciones para difusión masiva de alertas y órdenes de evacuación.")
+
+Rel(ciudadano, sismoReporta, "Registra reportes de daños estructurales y personas atrapadas en", "HTTPS/PWA Offline")
+Rel(brigadista, sismoReporta, "Consulta órdenes de auxilio y actualiza estado de rescate en", "HTTPS/Mobile")
+Rel(coordinador, sismoReporta, "Monitorea mapa de calor y despacha cuadrillas de rescate desde", "HTTPS/Web")
+
+Rel(sismoReporta, servicioMapas, "Descarga teselas y capas cartográficas base desde", "HTTPS/Tiles")
+Rel(sismoReporta, pasarelaSms, "Emite órdenes de evacuación y alertas masivas a través de", "HTTPS/REST")
+
+@enduml
