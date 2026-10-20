@@ -1,14 +1,14 @@
-# SismoReporta AQP — Laboratorio 04: Fundamentos de Arquitectura de Software
+# SismoReporta AQP — Plataforma de Gestión y Coordinación de Emergencias
 **Construcción de Software · EPIS-UNSA · 2026-B · Grupo 08**  
 Docente: Mg. Antonio Arroyo Paz
 
 ---
 
 ## Integrantes
-| Nombre | Usuario GitHub | Correo Institucional | Rol en el Laboratorio |
+| Nombre | Usuario GitHub | Correo Institucional | Rol en los Laboratorios |
 | :--- | :---: | :---: | :--- |
-| **Santiago Palma** | `@santiagopalma12` | `spalmaa@unsa.edu.pe` | Arquitecto de Software, Diagramador (Mermaid & Python Diagrams), Redactor de ADR-001 y ADR-003. |
-| **Dario Rafael Cornejo Hurtado** | `@darich1010` | `dcornejohu@unsa.edu.pe` | Especialista en Resiliencia y Datos, Diagramador PlantUML, Redactor de ADR-002, Verificador y Auditor de IA. |
+| **Santiago Palma** | `@santiagopalma12` | `spalmaa@unsa.edu.pe` | Arquitecto de Software, Diagramador (Mermaid, Diagrams, Structurizr DSL), Autor de ADRs, Modelado de Clases y Secuencia. |
+| **Dario Rafael Cornejo Hurtado** | `@darich1010` | `dcornejohu@unsa.edu.pe` | Especialista en Resiliencia y Datos, Diagramador C4-PlantUML, Auditor de Consistencia C1–C5 y Lista Oficial C4, Verificador de IA. |
 
 ---
 
@@ -226,17 +226,103 @@ stateDiagram-v2
 
 ---
 
+## Arquitectura C4 (Lab 06)
+
+En este laboratorio se consolida la arquitectura del sistema mediante el **Modelo C4** y el paradigma de **Arquitectura como Código (Architecture as Code - AaC)** utilizando un modelo único y centralizado en **Structurizr DSL**, del cual se derivan coherentemente todas las vistas visuales hacia **C4-PlantUML** y **Mermaid**.
+
+### Entregables del Laboratorio
+* **E1: Inventario de Elementos y Diagrama de Contexto:**
+  * Inventario de Elementos y Trazabilidad: [`docs/architecture/c4/inventario.md`](docs/architecture/c4/inventario.md)
+  * Modelo Central en Structurizr DSL: [`docs/architecture/c4/workspace.dsl`](docs/architecture/c4/workspace.dsl)
+  * Vista de Contexto (PlantUML): [`docs/architecture/c4/export/structurizr-Contexto.puml`](docs/architecture/c4/export/structurizr-Contexto.puml)
+  * Imagen Renderizada: [`docs/architecture/c4/img/structurizr-Contexto.png`](docs/architecture/c4/img/structurizr-Contexto.png)
+* **E2: Diagrama de Contenedores:**
+  * Vista de Contenedores (PlantUML): [`docs/architecture/c4/export/structurizr-Contenedores.puml`](docs/architecture/c4/export/structurizr-Contenedores.puml)
+  * Imagen Renderizada: [`docs/architecture/c4/img/structurizr-Contenedores.png`](docs/architecture/c4/img/structurizr-Contenedores.png)
+* **E3: Diagrama de Componentes del API Backend:**
+  * Vista de Componentes (PlantUML): [`docs/architecture/c4/export/structurizr-Componentes.puml`](docs/architecture/c4/export/structurizr-Componentes.puml)
+  * Imagen Renderizada: [`docs/architecture/c4/img/structurizr-Componentes.png`](docs/architecture/c4/img/structurizr-Componentes.png)
+* **E4: Vista Dinámica del Flujo Crítico de Sincronización:**
+  * Vista Dinámica (PlantUML): [`docs/architecture/c4/export/structurizr-SincronizacionOffline.puml`](docs/architecture/c4/export/structurizr-SincronizacionOffline.puml)
+  * Imagen Renderizada: [`docs/architecture/c4/img/structurizr-SincronizacionOffline.png`](docs/architecture/c4/img/structurizr-SincronizacionOffline.png)
+  * Comparación Secuencia UML vs Dinámica C4: [`docs/architecture/c4/comparacion.md`](docs/architecture/c4/comparacion.md)
+* **E5: Vista de Despliegue en Producción:**
+  * Vista de Despliegue (PlantUML): [`docs/architecture/c4/export/structurizr-Despliegue.puml`](docs/architecture/c4/export/structurizr-Despliegue.puml)
+  * Imagen Renderizada: [`docs/architecture/c4/img/structurizr-Despliegue.png`](docs/architecture/c4/img/structurizr-Despliegue.png)
+* **E6: Exportación Multiformato y Comparación de Herramientas:**
+  * Diagrama de Contexto Escrito a Mano: [`docs/architecture/c4/contexto-manual.puml`](docs/architecture/c4/contexto-manual.puml)
+  * Imagen Renderizada del Contexto Manual: [`docs/architecture/c4/img/contexto-manual.png`](docs/architecture/c4/img/contexto-manual.png)
+  * Análisis Comparativo (Manual vs DSL Centralizado): [`docs/architecture/c4/comparacion.md`](docs/architecture/c4/comparacion.md)
+* **E7: Auditoría de Calidad Oficial, Explicación y Bitácora de IA:**
+  * Lista de Revisión Oficial C4 y Falso Positivo: [`docs/architecture/c4/revision-c4.md`](docs/architecture/c4/revision-c4.md)
+  * Explicación Ejecutiva No Técnica (<= 120 palabras): [`docs/architecture/c4/explicacion.md`](docs/architecture/c4/explicacion.md)
+  * Bitácora de 5+ Interacciones con IA: [`docs/architecture/c4/bitacora-ia.md`](docs/architecture/c4/bitacora-ia.md)
+* **E8: Cuestionario e Informe Formal:**
+  * Solución al Cuestionario de 8 Preguntas: [`CUESTIONARIO.md`](CUESTIONARIO.md)
+  * Documento Typst Compilable: [`informe_lab06.typ`](informe_lab06.typ)
+  * Documento PDF Final: [`informe_lab06.pdf`](informe_lab06.pdf)
+
+---
+
+### Diagrama de Contexto Embebido (E8 — Mermaid exportado desde Structurizr DSL)
+
+```mermaid
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["System Context View: SismoReporta AQP"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    1["<div style='font-weight: bold'>Ciudadano Afectado</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Habitante de la región<br />Arequipa que reporta daños<br />estructurales, personas<br />atrapadas o vías colapsadas<br />mediante fotografías y GPS.</div>"]
+    style 1 fill:#08427b,stroke:#052e56,color:#ffffff
+    2["<div style='font-weight: bold'>Brigadista en Campo</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Personal de rescate<br />(Bomberos, Cruz Roja, Defensa<br />Civil) que recibe órdenes de<br />auxilio y actualiza la<br />atención de víctimas en<br />tiempo real.</div>"]
+    style 2 fill:#08427b,stroke:#052e56,color:#ffffff
+    3["<div style='font-weight: bold'>Coordinador del COE</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Operador de Defensa Civil y<br />COE que evalúa el mapa de<br />calor de incidentes, prioriza<br />severidades críticas y<br />despacha brigadas de rescate.</div>"]
+    style 3 fill:#08427b,stroke:#052e56,color:#ffffff
+    4["<div style='font-weight: bold'>Servicio de Mapas y Teselas</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Servicio externo de<br />cartografía base y<br />geocodificación<br />(OpenStreetMap / Mapbox<br />Tiles).</div>"]
+    style 4 fill:#999999,stroke:#6b6b6b,color:#ffffff
+    5["<div style='font-weight: bold'>Pasarela de Alertas SMS / Broadcast</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Servicio externo de<br />telecomunicaciones para<br />difusión masiva de alertas<br />tempranas y órdenes de<br />evacuación.</div>"]
+    style 5 fill:#999999,stroke:#6b6b6b,color:#ffffff
+    6["<div style='font-weight: bold'>SismoReporta AQP</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Plataforma ciudadana y de<br />coordinación de emergencias<br />post-sismo con soporte de<br />funcionamiento sin conexión y<br />sincronización diferida<br />masiva.</div>"]
+    style 6 fill:#1168bd,stroke:#0b4884,color:#ffffff
+
+    1-. "<div>Registra reportes de daños<br />estructurales y personas<br />atrapadas en</div><div style='font-size: 70%'></div>" .->6
+    2-. "<div>Consulta órdenes de auxilio y<br />actualiza estado de rescate<br />en</div><div style='font-size: 70%'></div>" .->6
+    3-. "<div>Monitorea mapa de calor y<br />despacha cuadrillas de<br />rescate desde</div><div style='font-size: 70%'></div>" .->6
+    6-. "<div>Descarga teselas y capas<br />cartográficas base desde</div><div style='font-size: 70%'>[HTTPS/Tiles]</div>" .->4
+    6-. "<div>Emite órdenes de evacuación y<br />alertas masivas a través de</div><div style='font-size: 70%'>[HTTPS/REST]</div>" .->5
+
+  end
+```
+
+---
+
 ## Cómo Reproducir el Proyecto
 
-### 1. Requisitos
+### 1. Requisitos del Entorno
 * Python 3.10+
-* OpenJDK 17+ y PlantUML (`plantuml.jar`)
+* OpenJDK 17+ (Java 25 probado)
+* Structurizr CLI (`structurizr.sh`) o imagen Docker `structurizr/cli`
+* PlantUML y Graphviz (`plantuml.jar` o Docker `plantuml/plantuml`)
 * Typst CLI (`typst`)
 * Pylint / Pyreverse (`pip install pylint`)
 
-### 2. Renderizado de Diagramas UML
+### 2. Validación y Exportación de la Arquitectura C4 (Lab 06)
 ```bash
-# Renderizar diagramas PlantUML
+# Validar la consistencia semántica del modelo DSL
+structurizr.sh validate -w docs/architecture/c4/workspace.dsl
+
+# Exportar el modelo a C4-PlantUML y Mermaid
+structurizr.sh export -w docs/architecture/c4/workspace.dsl -f plantuml/c4plantuml -o docs/architecture/c4/export
+structurizr.sh export -w docs/architecture/c4/workspace.dsl -f mermaid -o docs/architecture/c4/export
+
+# Renderizar diagramas a imágenes PNG de alta resolución
+docker run --rm -v "$PWD":/work -w /work plantuml/plantuml "docs/architecture/c4/export/*.puml" -o ../img/
+docker run --rm -v "$PWD":/work -w /work plantuml/plantuml docs/architecture/c4/contexto-manual.puml -o img/
+```
+
+### 3. Renderizado de Diagramas UML (Lab 05)
+```bash
 java -jar plantuml.jar -tpng docs/design/clases.puml -o img/
 java -jar plantuml.jar -tpng docs/design/secuencia-sincronizar-reporte.puml -o img/
 java -jar plantuml.jar -tpng docs/design/actividades-priorizar-asignar.puml -o img/
@@ -244,13 +330,12 @@ java -jar plantuml.jar -tpng docs/design/paquetes.puml -o img/
 java -jar plantuml.jar -tpng docs/design/estados-reporte.puml -o img/
 ```
 
-### 3. Ingeniería Inversa (Round-Trip)
+### 4. Compilación de Informes Formales en Typst
 ```bash
-pyreverse -o puml -p sismoreporta src/sismoreporta
-java -jar plantuml.jar -tpng classes_sismoreporta.puml -o docs/design/img/
+# Compilar informe del Laboratorio 05
+typst compile informe_lab05.typ informe_lab05.pdf
+
+# Compilar informe del Laboratorio 06
+typst compile informe_lab06.typ informe_lab06.pdf
 ```
 
-### 4. Compilación del Informe Formal en Typst
-```bash
-typst compile informe_lab05.typ informe_lab05.pdf
-```
