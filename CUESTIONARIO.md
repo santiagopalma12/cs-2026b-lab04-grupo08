@@ -1,6 +1,6 @@
 # Cuestionario Oficial de Laboratorio 06: Modelo C4
 **Construcción de Software · EPIS-UNSA · Semestre 2026-B · Grupo 08**  
-Docente: Mg. Antonio Arroyo Paz  
+Docente: Mg. Alexander Javier Benavides Rojas  
 Integrantes: Santiago Palma (`spalmaa@unsa.edu.pe`), Dario Rafael Cornejo Hurtado (`dcornejohu@unsa.edu.pe`)
 
 ---

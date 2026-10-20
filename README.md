@@ -1,6 +1,6 @@
 # SismoReporta AQP — Plataforma de Gestión y Coordinación de Emergencias
 **Construcción de Software · EPIS-UNSA · 2026-B · Grupo 08**  
-Docente: Mg. Antonio Arroyo Paz
+Docente: Mg. Alexander Javier Benavides Rojas
 
 ---
 
