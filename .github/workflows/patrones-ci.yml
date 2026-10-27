@@ -1,0 +1,52 @@
+name: Patrones de Diseño CI (Lab 07)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-and-complexity:
+    name: Verificación de Pruebas y Complejidad Ciclomática
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest radon
+
+      - name: Ejecutar Suite de Pruebas Automatizadas (Pytest)
+        run: |
+          pytest -v tests/
+
+      - name: Control de Calidad de Complejidad Ciclomática (Radon)
+        run: |
+          echo "Verificando que ningún método refactorizado supere complejidad 10 (Rango C o superior)..."
+          # Excluimos la carpeta 'antes' que deliberadamente contiene la versión previa monolítica
+          OUTPUT=$(radon cc -s --min C -e "src/sismoreporta/antes/*" src/sismoreporta/)
+          if [ -n "$OUTPUT" ]; then
+            echo "ERROR: Se detectaron métodos con complejidad mayor a 10 (Rango C):"
+            echo "$OUTPUT"
+            exit 1
+          else
+            echo "SUCCESS: Todos los métodos refactorizados poseen complejidad ciclomática óptima (Rango A o B)."
+          fi
+
+      - name: Reporte de Métricas Generales
+        run: |
+          echo "=== Complejidad Ciclomática General ==="
+          radon cc -s -a src/sismoreporta/
+          echo "=== Métricas de Volumen (SLOC) ==="
+          radon raw -s src/sismoreporta/
+          echo "=== Índice de Mantenibilidad (MI) ==="
+          radon mi -s src/sismoreporta/

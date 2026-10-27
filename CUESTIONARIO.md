@@ -1,115 +1,150 @@
-# Cuestionario Oficial de Laboratorio 06: Modelo C4
-**Construcción de Software · EPIS-UNSA · Semestre 2026-B · Grupo 08**  
-Docente: Mg. Alexander Javier Benavides Rojas  
-Integrantes: Santiago Palma (`spalmaa@unsa.edu.pe`), Dario Rafael Cornejo Hurtado (`dcornejohu@unsa.edu.pe`)
+# Cuestionario Oficial — Laboratorio 07: Patrones de Diseño con IA
+
+**Asignatura:** Construcción de Software (2026-B)  
+**Grupo:** 08 — SismoReporta AQP  
+**Integrantes:**  
+- Santiago Palma (`spalmaa@unsa.edu.pe`)  
+- Dario Rafael Cornejo Hurtado (`dcornejohu@unsa.edu.pe`)  
+**Docente:** Mg. Alexander Javier Benavides Rojas
 
 ---
 
-### 1. ¿Qué problema de los diagramas tradicionales de "cajas y flechas" resuelve el modelo C4? Dé un ejemplo de ambigüedad que haya evitado en su caso.
+### Pregunta 1: ¿Qué diferencia hay entre un patrón arquitectónico (Laboratorio 04) y un patrón de diseño? Dé un ejemplo de cada uno en su caso.
 
 **Respuesta:**  
-Los diagramas tradicionales de "cajas y flechas" adolecen de severa ambigüedad semántica: carecen de una jerarquía de abstracción definida (mezclan capas lógicas de código con servidores físicos en el mismo gráfico), omiten la tecnología y los protocolos de red, y utilizan flechas genéricas rotuladas como "usa" o "se conecta" sin especificar la dirección de los datos ni la intención funcional del conector.
+La diferencia radica fundamentalmente en el **alcance (scope), nivel de abstracción y escala de impacto** en el ciclo de vida del software:
 
-**Ejemplo en SismoReporta AQP:**  
-En un diagrama informal, una caja rotulada simplemente como *"Servicio de Mapas"* conectada con una flecha bidireccional a la aplicación no aclara si se trata de un componente interno desarrollado por el equipo (como un motor SIG en Python), una base de datos geoespacial local, o una API externa de terceros consumida bajo demanda. El modelo C4 resolvió esto de forma unívoca:
-- En **Nivel 1 (Contexto)**, se definió `Servicio de Mapas y Teselas` explícitamente como un **Sistema Externo** (`softwareSystem ... "Externo"`), estableciendo que se encuentra fuera del límite de responsabilidad del equipo y especificando la intención: *"Descarga teselas y capas cartográficas base desde"* vía `HTTPS/Tiles`.
-- En **Nivel 2 (Contenedores)**, se diferenció nítidamente dicho servicio externo del contenedor interno `Base de Datos Geoespacial` (`PostgreSQL 16, PostGIS`), dejando en claro qué datos residen bajo control transaccional del monolito y cuáles son consumidos vía CDN.
+- **Patrón Arquitectónico (Laboratorio 04):** Define la estructura macroscópica de todo el sistema, estableciendo las divisiones de subsistemas, los límites de despliegue, la topología de red, los mecanismos de persistencia y las estrategias globales para satisfacer atributos de calidad (drivers y escenarios QA). Tiene un alto costo de reversión.
+  - *Ejemplo en SismoReporta AQP:* El patrón **Monolito Modular Asíncrono con Buffer en Memoria (ADR-001)**. Organiza todo el software en un único artefacto desplegable en Python estructurado en módulos desacoplados (*Ingesta*, *Triaje*, *Brigadas*, *GIS*), utilizando Redis como buffer no bloqueante para absorber 20,000 peticiones en la primera hora post-terremoto ($p95 \le 1.5\text{ s}$). Afecta la infraestructura física, los pipelines de CI/CD y los protocolos de comunicación (`RESP`, `SQL/TCP`, `HTTPS`).
+
+- **Patrón de Diseño (Laboratorio 07):** Resuelve problemas recurrentes de diseño a nivel microscópico dentro de un módulo, estructurando la relación, creación y colaboración entre clases y objetos en el código fuente. Aplica directamente los principios SOLID (*"programar contra interfaces"*, *"composición sobre herencia"*). Su alcance es local y su refactorización no altera la arquitectura global.
+  - *Ejemplo en SismoReporta AQP:* El patrón **Strategy + Adapter (`ICanalDespacho`)** en el módulo de Ingesta. Encapsula los algoritmos intercambiables de transporte de reportes (Redis, RabbitMQ, SMS Satelital, Mesh LoRa). Su impacto se circunscribe a la forma en que `ServicioSincronizacion` despacha un paquete sin acoplarse a los métodos `rpush()`, `basic_publish()` o `transmitir_trama()` de los SDKs externos.
 
 ---
 
-### 2. ¿Qué es un "contenedor" en C4 y por qué no equivale a un contenedor Docker? Indique un contenedor de su caso que no se ejecute en Docker.
+### Pregunta 2: Explique con su código cómo Strategy materializa el principio abierto/cerrado. ¿Qué tuvo que modificar para agregar una variante nueva?
 
 **Respuesta:**  
-En el modelo C4, un **contenedor** se define como una unidad de software ejecutable y desplegable de forma independiente, o un almacén de datos (como una base de datos relacional, un sistema de archivos o un esquema en memoria) que aloja código o datos y forma parte integral de la arquitectura del sistema.  
+El Principio Abierto/Cerrado (OCP - Bertrand Meyer / Robert C. Martin) establece que las entidades de software deben estar **abiertas para su extensión, pero cerradas para su modificación**.
 
-No equivale a un contenedor Docker porque Docker es una tecnología específica de virtualización a nivel de sistema operativo (infraestructura de ejecución), mientras que el contenedor C4 es una **abstracción arquitectónica y lógica**. Un contenedor C4 puede ejecutarse dentro de un contenedor Docker, pero también puede ser un ejecutable nativo en bare-metal, una aplicación móvil instalada en un smartphone, una función serverless o una base de datos administrada en la nube (DBaaS).
+En la versión antes (`antes/servicio.py`), incorporar un nuevo canal de contingencia (como radios de largo alcance Mesh LoRa) obligaba a violar OCP: era mandatorio editar `sincronizar_reporte()`, añadir una nueva rama `elif canal == "MESH_LORA":` con su bucle de reintentos duplicado, y arriesgar regresiones en los canales existentes.
 
-**Ejemplo en SismoReporta AQP:**  
-El contenedor `PWA Cliente Offline` (`TypeScript, React, PWA, IndexedDB`) **no se ejecuta en Docker**. Es una aplicación que corre directamente en el dispositivo móvil del ciudadano o brigadista, interpretada por el motor del navegador web local (V8 / WebKit) y respaldada por la API de almacenamiento local del cliente (`IndexedDB`). Tratarlo como un contenedor Docker sería un error conceptual de infraestructura.
+Con el patrón Strategy (`canales.py`), la variación se encapsula detrás de la abstracción `ICanalDespacho`:
+```python
+class ICanalDespacho(ABC):
+    @abstractmethod
+    def despachar(self, reporte_id: str, descripcion: str) -> ResultadoDespacho:
+        ...
+```
+Para agregar la nueva estrategia `MeshLoraCanalAdapter` (demostrado en `tests/test_patrones.py`), se realizaron exactamente dos acciones:
+1. **Crear una clase nueva que implementa la interfaz:**
+   ```python
+   class MeshLoraCanalAdapter(ICanalDespacho):
+       def despachar(self, reporte_id: str, descripcion: str) -> ResultadoDespacho:
+           # Lógica específica de transmisión por radio LoRa
+           return ResultadoDespacho(exitoso=True, canal_usado="MESH_LORA")
+   ```
+2. **Registrar la nueva variante en la factoría en tiempo de ejecución:**
+   ```python
+   fabrica.registrar("MESH_LORA", lambda: MeshLoraCanalAdapter())
+   ```
+**¿Qué se modificó en `ServicioSincronizacion`?**  
+**Absolutamente nada (0 líneas de código modificadas).** El servicio sigue invocando `canal = self.fabrica.crear(canal_nombre)` y `canal.despachar(...)`. El sistema se extendió sin abrir a modificación la lógica de orquestación de emergencias.
 
 ---
 
-### 3. ¿Qué público y qué nivel de detalle tiene cada uno de los cuatro niveles de C4? ¿Por qué rara vez se dibuja el nivel 4 a mano?
+### Pregunta 3: ¿En qué se diferencian Adapter y Decorator si ambos "envuelven" un objeto?
 
 **Respuesta:**  
+Aunque ambos patrones estructurales utilizan la técnica de composición mediante un objeto envoltorio (*wrapper*), difieren radicalmente en su **intención arquitectónica y en la compatibilidad de sus interfaces**:
 
-| Nivel C4 | Nivel de Detalle Arquitectónico | Público Objetivo Primario |
+| Criterio | Patrón Adapter (GoF) | Patrón Decorator (GoF) |
 | :--- | :--- | :--- |
-| **Nivel 1: Contexto (System Context)** | Vista satelital del sistema, mostrando actores (personas) y dependencias con sistemas externos sin detalles técnicos internos. | Autoridades de gestión, líderes de proyectos, evaluadores de negocio y usuarios no técnicos. |
-| **Nivel 2: Contenedores (Container)** | Muestra la forma de la arquitectura: aplicaciones web/móviles, APIs backend, brokers y bases de datos con sus tecnologías y protocolos. | Arquitectos de software, desarrolladores del equipo, personal de DevOps y soporte de infraestructura. |
-| **Nivel 3: Componentes (Component)** | Zoom interno sobre un contenedor específico, mostrando sus módulos de código, controladores, servicios y dependencias lógicas. | Desarrolladores de software que implementarán o modificarán código dentro de dicho contenedor. |
-| **Nivel 4: Código (Code)** | Diagramas de clases UML, diagramas de entidad-relación o estructuras de datos a nivel de métodos y atributos. | Ingenieros de software y redactores de pruebas unitarias que requieren precisión milimétrica de código. |
-
-**Por qué rara vez se dibuja el Nivel 4 a mano:**  
-El nivel de código presenta una tasa de cambio (volatilidad) extremadamente acelerada: cualquier refactorización, cambio de firma en una función o adición de atributos deja obsoleto un diagrama manual en cuestión de días o semanas. Dibujarlo a mano representa un desperdicio de esfuerzo de ingeniería (*overhead*). Por ello, las mejores prácticas de la industria estipulan que el nivel 4 debe generarse de manera automatizada bajo demanda a partir del código fuente mediante herramientas de ingeniería inversa (como `pyreverse`, herramientas integradas en IDEs o plugins de compilación).
+| **Intención principal** | **Convertir una interfaz ajena e incompatible** en la que el cliente espera, permitiendo que clases dispares colaboren. | **Agregar responsabilidades o comportamientos transversales** dinámicamente a un objeto sin alterar su interfaz. |
+| **Relación con la interfaz envuelta** | El Adapter implementa la interfaz esperada por el cliente (`ICanalDespacho`), pero el objeto envuelto (*Adaptee*, ej. `RabbitMQSDK`) tiene una **interfaz completamente diferente** (`basic_publish()`). | El Decorator implementa **exactamente la misma interfaz** que el objeto que envuelve (`ICanalDespacho` envuelve a otro `ICanalDespacho`). |
+| **Transparencia para el cliente** | El cliente sabe que invoca la interfaz de destino, pero ignora los métodos nativos del SDK de terceros. | Es 100% transparente y recursivo: un decorador puede envolver a otro decorador y al cliente le resulta indistinguible. |
+| **Ejemplo en SismoReporta AQP** | `RabbitMQCanalAdapter` envuelve a `RabbitMQSDK` convirtiendo llamadas `despachar()` a `basic_publish(..., body_bytes)`. | `ConReintentos` envuelve a cualquier `ICanalDespacho` para añadir captura de `TimeoutError` sin cambiar la firma `despachar()`. |
+| **En el componente de IA** | `ClienteLLMAdapter` convierte `generate_text() -> dict` a `completar() -> str`. | `ConCacheLLM` envuelve a `ProveedorLLM` añadiendo almacenamiento en memoria de respuestas a prompts repetidos. |
 
 ---
 
-### 4. Compare la vista dinámica de C4 con el diagrama de secuencia UML de su flujo crítico. ¿Cuándo usaría cada una?
+### Pregunta 4: ¿Por qué el patrón State es la implementación natural de un diagrama de máquina de estados? ¿Qué ganó frente a usar condicionales?
 
 **Respuesta:**  
+El patrón State es la traducción formal 1 a 1 de una máquina de estados finitos (FSM) a la programación orientada a objetos:
+- Cada estado del diagrama (`BORRADOR`, `ENCOLADO`, `RECIBIDO`, `VERIFICADO`, `ATENDIDO`, `DESCARTADO` en `estados-reporte.mmd`) se materializa como una **clase concreta independiente** que hereda de una clase base común (`EstadoReporteState`).
+- Cada flecha o evento de transición del diagrama se modela como un **método formal** (`encolar_offline()`, `sincronizar()`, `verificar_triaje()`, `atender_incidente()`, `descartar()`).
 
-* **Diferencias Estructurales y de Abstracción:**  
-  La vista dinámica C4 (`SincronizacionOffline`) modela la interacción entre **contenedores macro** del sistema (`pwaCliente`, `proxyNginx`, `apiBackend`, `brokerRedis`, `workerAsincrono`), concentrándose en el flujo de la información, el orden cronológico de red y los protocolos de transporte (`HTTPS`, `RESP`, `SQL/TCP`). En cambio, el diagrama de secuencia UML (`docs/design/secuencia-sincronizar-reporte.puml`) desciende a nivel de **clases e instancias de código** (`SyncController`, `ServicioSincronizacion`, `Reporte`, `IRepositorioReportes`), documentando bifurcaciones lógicas (`alt/else`), bucles de procesamiento (`loop`) y llamadas locales sincrónicas y asíncronas.
-
-* **Criterio de Uso:**  
-  - **Usaría la Vista Dinámica C4:** En sesiones de revisión de diseño de sistemas, auditorías de escalabilidad, análisis de resiliencia con el equipo de DevOps/SRE y explicaciones técnicas de alto nivel para justificar cómo el sistema absorbe picos de 20,000 peticiones sin colapsar.
-  - **Usaría el Diagrama de Secuencia UML:** Durante la fase de construcción de código fuente, diseño de pruebas unitarias y de integración (*mocking*), y resolución de errores (*debugging*) donde se necesita garantizar que los controladores invoquen los métodos adecuados en las entidades de dominio y respeten la máquina de estados.
+**Ganancias determinantes frente al uso de condicionales procedimentales:**
+1. **Transiciones ilegales imposibles por construcción:** La clase base prohíbe todas las transiciones por defecto elevando `ValueError`. Cada subclase de estado redefine únicamente las transiciones válidas según el diagrama. Intentar sincronizar un reporte `ATENDIDO` o `DESCARTADO` falla automáticamente sin requerir bloques `if/elif` defensivos.
+2. **Eliminación del olor "Primitive Obsession":** El estado deja de ser un `string` mutable y propenso a errores tipográficos (`"RECIBIDO"`, `"recibido"`, `"RECIVIDO"`) para convertirse en un objeto con identidad y reglas formales.
+3. **Principio de Responsabilidad Única (SRP):** La lógica de validación de un estado específico (ej. verificar que un reporte en borrador posea descripción antes de encolar) reside en `BorradorState`, no dispersa en el servicio.
+4. **Aciclicidad y claridad:** Si en el futuro se añade un nuevo estado (ej. `EN_VERIFICACION_RADIAL`), basta agregar una nueva subclase sin tocar ni arriesgar el funcionamiento de los 5 estados restantes.
 
 ---
 
-### 5. ¿Qué ventaja concreta tiene modelar con Structurizr DSL frente a dibujar cada vista con C4-PlantUML o Mermaid?
+### Pregunta 5: ¿Por qué son indispensables las pruebas de caracterización antes de refactorizar? Describa un error que sus pruebas detectaron.
 
 **Respuesta:**  
-La ventaja fundamental radica en el principio de **Fuente Única de Verdad (Single Source of Truth - SSoT)**.  
+Según Michael Feathers (*Working Effectively with Legacy Code*), el código sin pruebas es código heredado peligroso de modificar. Las pruebas de caracterización son indispensables porque actúan como una **red de seguridad inmutable**:
+- Capturan y congelan el comportamiento observable actual del sistema (tanto casos de éxito como errores y reglas de borde) antes de alterar una sola línea de código.
+- Al ejecutarse con el fixture parametrizado (`@pytest.fixture(params=["sismoreporta.antes.servicio", "sismoreporta.servicio"])`), proporcionan una garantía matemática de que el refactor preservó intacto el comportamiento preexistente sin introducir regresiones silenciosas.
 
-Al utilizar Structurizr DSL, se construye un **modelo relacional abstracto centralizado**: las personas, contenedores, componentes y sistemas externos se definen exactamente una vez dentro del bloque `model`. A partir de dicha definición única, el compilador infiere y proyecta automáticamente las distintas vistas (`systemContext`, `container`, `component`, `dynamic`, `deployment`).  
-
-Si se dibujara cada vista por separado en archivos C4-PlantUML o Mermaid:
-1. Existiría duplicación masiva de código visual y alto riesgo de inconsistencia sintáctica (por ejemplo, alterar la descripción de un contenedor en una vista y olvidar actualizarla en las otras tres).
-2. Si un componente o tecnología cambia, en Structurizr DSL basta con modificar una sola línea del modelo y compilar con `structurizr.sh export` para regenerar todos los diagramas de manera idéntica y sincronizada.
-3. El compilador de Structurizr DSL provee **análisis semántico y tipado estricto** (`validate`), impidiendo relaciones hacia elementos inexistentes, enlaces huérfanos o violaciones en la jerarquía de abstracción (como referenciar un componente en una vista de contexto).
+**Error real detectado por las pruebas durante el laboratorio:**
+Durante la implementación del Decorator `ConReintentos`, la primera versión generada con asistencia de IA capturaba de forma genérica cualquier fallo con `except Exception:`.
+- **Falla detectada:** La prueba `test_canal_no_soportado_lanza_error` esperaba que si se ingresaba un canal inválido, el sistema arrojara inmediatamente `ValueError`. Sin embargo, `ConReintentos` interceptaba el error y reintentaba 3 veces antes de fallar. En producción, esto causaría reintentos inútiles ante errores no recuperables (cargas malformadas o falta de permisos).
+- **Corrección:** Guiados por la falla de la prueba, se restringió la captura exclusivamente a `except TimeoutError:`. Las fallas transitorias de red se reintentan; los errores de validación de negocio fallan de inmediato como corresponde.
 
 ---
 
-### 6. ¿Qué elementos del modelo C4 de su caso se justifican con el ADR-001 del Laboratorio 04? Cite al menos dos.
+### Pregunta 6: ¿Qué patrón propuso la IA que ustedes rechazaron y por qué? ¿Qué es la "patternitis"?
 
 **Respuesta:**  
-El documento `ADR-001: Adopción de Monolito Modular Asíncrono con Colas en Memoria` fundamenta directamente las siguientes decisiones modeladas en el C4:
+**Patrones propuestos por la IA y rechazados por el equipo:**
+1. **`Singleton` para `FabricaCanales`:**
+   - *Propuesta de la IA:* Implementar la factoría como una instancia global única accesible mediante `FabricaCanales.get_instance()` para "ahorrar memoria y centralizar el registro".
+   - *Por qué se rechazó:* El patrón Singleton introduce acoplamiento global encubierto, dificulta las pruebas concurrentes y bloquea la inyección de canales simulados (`MeshLoraCanalAdapter`) en entornos de prueba aislados. Se sustituyó por inyección de dependencias explícita en el constructor.
+2. **`Abstract Factory` para familias de canales y notificadores:**
+   - *Por qué se rechazó:* No existen familias cohesivas interdependientes de productos en SismoReporta AQP. Forzar interfaces abstractas paralelas para crear simultáneamente transporte y notificaciones era sobreingeniería estéril.
 
-1. **El contenedor `Buffer y Broker de Colas` (`Redis 7`):**  
-   *Justificación en el ADR-001:* Para satisfacer el atributo de calidad crítico **QA-01 (Disponibilidad y Rendimiento)** ante ráfagas masivas de 20,000 reportes en la primera hora post-sismo, el ADR prohíbe la persistencia relacional síncrona inmediata en el endpoint HTTP. Se definió Redis como un amortiguador de ráfagas (*shock-absorber*) en memoria que recibe el evento y permite que el contenedor `API Backend` emita una respuesta `HTTP 202 Accepted` en menos de 100 ms (cumpliendo $p95 \le 1.5\text{ s}$ de QA-02), desacoplando la ingesta de las tareas pesadas de base de datos.
-
-2. **La separación entre el contenedor `API Backend Monolítico` y el contenedor `Worker de Procesamiento Asíncrono` (`Celery`):**  
-   *Justificación en el ADR-001:* El ADR estipuló que las operaciones intensivas en CPU y disco —tales como la compresión de imágenes de colapsos estructurales, la deduplicación espacial mediante algoritmos PostGIS y el triaje automático— deben ejecutarse fuera de los hilos de atención HTTP. En el modelo C4, esto se traduce en dos contenedores de software diferenciados comunicados asíncronamente mediante Redis RESP, protegiendo al monolito de la degradación por saturación de hilos.
+**¿Qué es la "Patternitis"?**  
+La *Patternitis* (o sobreingeniería por patrones) es un antipatrón cognitivo y de diseño donde los desarrolladores o los modelos de lenguaje intentan forzar la mayor cantidad posible de patrones de diseño GoF en una base de código, sin que exista un olor de código concreto que lo demande ni una justificación de mantenibilidad.  
+Como consecuencia, el sistema sufre de **indirección excesiva, proliferación inmanejable de interfaces, dificultad de rastreo en debugging y pérdida de legibilidad**. Como regla de oro aprendida en la práctica: *Un patrón solo debe introducirse cuando un olor medible lo exige y las pruebas confirman su beneficio neto.*
 
 ---
 
-### 7. Describa un error de la IA al generar o revisar su modelo C4 y cómo lo detectó con la lista de revisión.
+### Pregunta 7: ¿Por qué se debe tratar la salida de un LLM como dato no confiable? Describa los guardrails de su caso y qué protegen.
 
 **Respuesta:**  
-Durante la generación inicial del borrador del modelo mediante el Prompt IA 1, la Inteligencia Artificial incluyó dentro de los límites del sistema `sismoReporta` un contenedor denominado `"Docker Compose"` y ubicó al servicio de cartografía como una base de datos interna.  
+La salida de un Modelo de Lenguaje (LLM) es intrínsecamente **probabilística y no determinista**: ante prompts idénticos puede generar respuestas disímiles, no tiene comprensión física del mundo y padece de alucinaciones (afirmaciones falsas emitidas con alta confianza lingüística). En una catástrofe sísmica en Arequipa, tratar la respuesta de un LLM como un dato confiable en el flujo transaccional puede costar vidas humanas.
 
-**Cómo se detectó mediante la lista de revisión:**  
-Al aplicar la **Lista de Revisión Oficial (Tabla 3 de la guía - Grupo Elementos)**, la pregunta clave establece:  
-> *"¿Cada elemento tiene nombre, tipo (persona, sistema, contenedor o componente), descripción de lo que hace y, si corresponde, tecnología? ¿Se entiende claramente su rol arquitectónico sin confundir infraestructura con software?"*  
-
-Al someter la propuesta a esta pregunta, se evidenció que:
-1. `Docker Compose` no aloja lógica de negocio ni representa un almacén de datos; es una herramienta de orquestación de infraestructura. Su lugar correcto en el modelo C4 es un **nodo de despliegue** (`deploymentNode`), no un contenedor de software.
-2. El servicio de mapas no es desarrollado, desplegado ni mantenido por el equipo; es un servicio de terceros. Su categoría formal es **Sistema Externo** (`softwareSystem ... "Externo"`).  
-Ambos errores fueron corregidos inmediatamente en el archivo `workspace.dsl`, garantizando la estricta pureza arquitectónica del modelo.
+**Guardrails implementados con Chain of Responsibility (`ia.py`):**
+1. **`SinAlucinacionMagnitud`:**
+   - *Qué protege:* Prohíbe que el LLM invente grados o escalas sísmicas (ej. *"Sismo de magnitud 8.5 Mw"* o *"Escala Richter 7.9"*) basándose únicamente en la descripción de un ciudadano común.  
+   - *Justificación de dominio:* Únicamente el Instituto Geofísico del Perú (IGP) y el Centro Sismológico Nacional poseen acelerógrafos calibrados para certificar magnitudes oficiales. Si la IA inventa una magnitud errónea, puede generar pánico infundado o inducir al COE a desestimar réplicas reales.
+2. **`SinPanicoSocial`:**
+   - *Qué protege:* Censa y bloquea frases alarmistas o de inducción al caos (ej. *"Evacúen Arequipa de inmediato"*, *"Saqueos inminentes"*, *"Tsunami en la ciudad"*).
+   - *Justificación de dominio:* Las instrucciones de evacuación zonal corresponden con exclusividad a las autoridades de Defensa Civil. Un mensaje alarmista propagado a través del mapa de calor provocaría estampidas humanas y congestión de vías de auxilio.
+3. **`FormatoSeveridadValido`:**
+   - *Qué protege:* Garantiza que la clasificación contenga de forma estricta una de las 4 categorías del catálogo oficial de incidentes: `LEVE`, `MODERADA`, `GRAVE` o `CATASTROFICA`.
+   - *Justificación de dominio:* Evita que respuestas ambiguas o poéticas del LLM rompan la máquina de estados o impidan priorizar el incidente en el algoritmo de triaje geoespacial.
 
 ---
 
-### 8. ¿Cómo adaptaría la explicación de su arquitectura para un docente evaluador, un inversionista y un nuevo developer del equipo?
+### Pregunta 8: Según sus métricas, ¿valió la pena el refactor? Argumente con la complejidad ciclomática, las líneas de código y los cambios previstos.
 
 **Respuesta:**  
+**Sí, valió absolutamente la pena desde una perspectiva de ingeniería de software para sistemas de misión crítica.** El análisis se sustenta en tres dimensiones cuantificables:
 
-* **Para el Docente Evaluador (Enfoque Teórico-Práctico, Normativo y de Consistencia):**  
-  *"SismoReporta AQP adopta una arquitectura de Monolito Modular Asíncrono respaldada formalmente por los ADR-001, ADR-002 y ADR-003. El diseño mitiga el colapso de red mediante persistencia offline en PWA (IndexedDB) y amortiguación en memoria con Redis para absorber ráfagas extremas de 20,000 incidentes. El modelo C4 se estructuró como una fuente única de verdad en Structurizr DSL, demostrando aciclicidad estricta entre los módulos de dominio (C4), coherencia con los diagramas de paquetes UML del Lab 05 y conformidad total con la lista de calidad de Simon Brown."*
+1. **Complejidad Ciclomática (Reducción del 86.4%):**
+   - El método crítico `sincronizar_reporte()` pasó de una **complejidad 22 (Rango D - difícil de testear y propenso a bugs)** a una **complejidad 3 (Rango A - simple, lineal y testeable)**.
+   - El promedio de complejidad de la clase bajó de **6.71 (B) a 1.93 (A)**. Esto reduce drásticamente el número de caminos independientes necesarios para lograr 100% de cobertura de ramas en pruebas unitarias.
 
-* **Para un Inversionista / Patrocinador Institucional (Enfoque de Impacto, Costo-Beneficio y Viabilidad):**  
-  *"SismoReporta AQP es la solución tecnológica más costo-eficiente para coordinar el auxilio ciudadano tras terremotos en el sur del país. Con una inversión mínima de infraestructura en la nube (menos de 20 dólares al mes), la plataforma garantiza cero reportes perdidos, operando incluso si los teléfonos no tienen señal. Esto permite a Defensa Civil optimizar el desplazamiento de brigadas y salvar vidas en las horas críticas, logrando un MVP listo para producción en tan solo un mes de desarrollo."*
+2. **Líneas de Código y Granularidad (El costo asumido):**
+   - El código de la lógica orquestadora pasó de 106 SLOC en 1 solo archivo procedural a 480 SLOC distribuidos en 6 módulos especializados (`servicio.py`, `canales.py`, `estados.py`, `eventos.py`, `comandos.py`, `ia.py`).
+   - Aunque el volumen total creció en un 352%, la cohesión de cada archivo es máxima (Single Responsibility Principle) y el índice de mantenibilidad (MI) aumentó de 52.93 a 58.73.
 
-* **Para un Nuevo Desarrollador del Equipo (Enfoque de Implementación, Stack y Flujo de Trabajo):**  
-  *"Bienvenido al proyecto. Trabajamos con una PWA en React/TypeScript que guarda todo en IndexedDB cuando se pierde la conexión. El backend es un monolito modular en FastAPI con esquemas Pydantic y PostgreSQL/PostGIS para cálculo geoespacial. Cuando un usuario envía un reporte, la API lo valida rápido y lo manda a una cola de Redis con HTTP 202; los workers en Celery se encargan de comprimir las fotos y calcular la severidad en segundo plano. Toda la arquitectura está versionada en `docs/architecture/c4/workspace.dsl`: compílala con `structurizr.sh` antes de subir cualquier commit para asegurar consistencia."*
+3. **Justificación por los Cambios Previstos en SismoReporta AQP:**
+   - Si la plataforma fuera un software estático que solo despachara por Redis y nunca integrara nuevos medios de comunicación, la versión inicial de 106 líneas habría sido suficiente.
+   - Sin embargo, en un escenario real de catástrofe en Arequipa donde las antenas 4G colapsan, el sistema **requiere conmutar dinámicamente entre Redis, RabbitMQ, Gateway Satelital y radio Mesh LoRa**. Gracias a Strategy + Factory, agregar LoRa demandó 0 cambios en el servicio central.
+   - Asimismo, aislar el LLM detrás de caché (`ConCacheLLM`) reduce la latencia en un 95% para descripciones recurrentes y los guardrails aseguran que ninguna alucinación comprometa la coordinación de brigadas.

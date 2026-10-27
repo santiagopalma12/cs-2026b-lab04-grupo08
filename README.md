@@ -297,17 +297,83 @@ graph LR
 
 ---
 
+## Patrones de Diseño con IA (Lab 07)
+
+En este laboratorio se refactoriza de forma segura el flujo crítico de *"Envío Offline y Sincronización Diferida de Reportes Post-Sismo"* hacia patrones de diseño GoF, midiendo objetivamente la reducción de complejidad ciclomática mediante **Radon**, blindando el comportamiento observable con **35 pruebas automatizadas en Pytest** y aislando un componente de IA no determinista (LLM) detrás de puertos, caché y una cadena de guardrails de dominio.
+
+### Tabla Olor de Código → Patrón GoF → Prueba Demostrativa
+
+| Olor Detectado (Fowler) | Patrón GoF Aplicado | Archivo de Implementación | Principio SOLID | Prueba Automatizada Demostrativa |
+| :--- | :--- | :--- | :--- | :--- |
+| **Método largo y $CC=22$:** `if/elif` por canal de red (`"REDIS"`, `"RABBITMQ"`, `"SMS_SATELITAL"`). | **Strategy + Factory (Registro)** | [`src/sismoreporta/canales.py`](src/sismoreporta/canales.py) | **O (Abierto/Cerrado)** | `test_open_closed_nuevo_canal_sin_modificar_servicio` (agrega `MeshLoraCanalAdapter` sin tocar el servicio). |
+| **Acoplamiento a SDKs ajenos:** El dominio maneja JSON de Redis, bytes AMQP y hex de satélite. | **Adapter** | [`src/sismoreporta/canales.py`](src/sismoreporta/canales.py) | **D (Inversión Dependencias)** | `test_adapter_aisla_llamadas_especificas_del_sdk` (normaliza respuesta en `ResultadoDespacho`). |
+| **Lógica duplicada:** Bucle de reintentos ante timeouts repetido en cada canal de red. | **Decorator (`ConReintentos`)** | [`src/sismoreporta/canales.py`](src/sismoreporta/canales.py) | **S (Responsabilidad Única)** | `test_reintenta_ante_dos_timeouts_y_logra_sincronizar` (recupera ante fallas transitorias). |
+| **Condicionales sobre estado:** Evaluaciones anidadas sobre cadenas de `reporte.estado`. | **State** | [`src/sismoreporta/estados.py`](src/sismoreporta/estados.py) | **L (Liskov) / OCP** | `test_state_impide_transiciones_invalidas` (prohíbe transiciones ilegales por construcción). |
+| **Notificaciones acopladas a mano:** Mensajes directos formateados para alertas COE y auditoría. | **Observer** | [`src/sismoreporta/eventos.py`](src/sismoreporta/eventos.py) | **S (Responsabilidad Única)** | `test_observer_nuevo_suscriptor_sin_tocar_servicio` (suscribe `TableroOperacionesMapa` desacoplado). |
+| **Sincronización sin señal:** Falta de abstracción para encolar operaciones diferidas. | **Command + Cola** | [`src/sismoreporta/comandos.py`](src/sismoreporta/comandos.py) | **S (Responsabilidad Única)** | `test_command_cola_offline_encola_y_procesa_en_lote` (procesa ráfaga acumulada offline). |
+| **IA No Confiable:** Respuestas probabilísticas con riesgo de alucinación o pánico social. | **Chain of Responsibility (Guardrails) + Decorator (Caché)** | [`src/sismoreporta/ia.py`](src/sismoreporta/ia.py) | **D (Inversión Dependencias)** | `test_guardrail_bloquea_alucinacion_de_magnitud`, `test_guardrail_bloquea_panico_social` y `test_decorator_cache_evita_llamadas_repetidas_al_llm`. |
+
+### Tabla Comparativa de Métricas Radon (Antes vs Después)
+
+| Métrica de Software | Versión ANTES (`antes/servicio.py`) | Versión DESPUÉS (`servicio.py` + módulos) | Impacto / Beneficio |
+| :--- | :---: | :---: | :---: |
+| **Complejidad Ciclomática Máxima (`sincronizar_reporte`)** | **22 (Rango D)** | **3 (Rango A)** | **-86.4% de complejidad** |
+| **Complejidad Promedio de la Clase Principal** | **6.71 (Rango B)** | **1.93 (Rango A)** | **-71.2% (Código limpio)** |
+| **Complejidad Promedio del Sistema Completo** | 6.71 (Rango B) | 2.04 (Rango A) | Rango A en todos los módulos |
+| **Líneas de Código Lógicas (SLOC)** | 106 SLOC | 121 SLOC (`servicio.py`) / 480 SLOC (Total) | +352% (Alta modularidad) |
+| **Índice de Mantenibilidad (MI)** | 52.93 (Rango A) | 58.73 (Rango A) | +10.9% (Menor acoplamiento) |
+| **Total de Pruebas Unitarias y de Caracterización** | 12 pruebas | 35 pruebas en verde | 100% pruebas pasando |
+
+### Entregables del Laboratorio 07
+* **E1: Catálogo de Olores y Pruebas de Caracterización:** [`docs/design/patrones/olores.md`](docs/design/patrones/olores.md) y [`tests/test_comportamiento.py`](tests/test_comportamiento.py)
+* **E2–E5: Módulos con Patrones GoF e IA:**
+  * Canales (Strategy, Adapter, Decorator, Factory): [`src/sismoreporta/canales.py`](src/sismoreporta/canales.py)
+  * Ciclo de Vida (State): [`src/sismoreporta/estados.py`](src/sismoreporta/estados.py)
+  * Eventos (Observer) y Cola Offline (Command): [`src/sismoreporta/eventos.py`](src/sismoreporta/eventos.py) y [`src/sismoreporta/comandos.py`](src/sismoreporta/comandos.py)
+  * IA Aislada (Guardrails Chain, Caché): [`src/sismoreporta/ia.py`](src/sismoreporta/ia.py)
+  * Servicio Orquestador Refactorizado: [`src/sismoreporta/servicio.py`](src/sismoreporta/servicio.py)
+  * Suite de Pruebas de Patrones: [`tests/test_patrones.py`](tests/test_patrones.py)
+* **E6: Métricas y Trade-off Arquitectónico:** [`docs/design/patrones/metricas.md`](docs/design/patrones/metricas.md)
+* **E7: Diagramas PlantUML y Bitácora de IA:**
+  * Diagramas de Clases de Patrones: [`docs/design/patrones/`](docs/design/patrones/)
+  * Diagrama de Clases General Actualizado: [`docs/design/clases.puml`](docs/design/clases.puml)
+  * Bitácora de 6 Interacciones con IA: [`docs/design/patrones/bitacora-ia.md`](docs/design/patrones/bitacora-ia.md)
+* **E8: ADR, Cuestionario e Informe Formal:**
+  * Decisión Arquitectónica ADR-005: [`docs/architecture/adr/005-patrones-de-diseno.md`](docs/architecture/adr/005-patrones-de-diseno.md)
+  * Solución al Cuestionario de 8 Preguntas: [`CUESTIONARIO.md`](CUESTIONARIO.md)
+  * Documento Typst Compilable: [`informe_lab07.typ`](informe_lab07.typ)
+  * Documento PDF Final: [`informe_lab07.pdf`](informe_lab07.pdf)
+* **Reto Opcional (+2 puntos):** GitHub Action de Integración Continua ([`.github/workflows/patrones-ci.yml`](.github/workflows/patrones-ci.yml)) que ejecuta Pytest y falla si la complejidad ciclomática supera 10 (`radon cc --min C`).
+
+---
+
 ## Cómo Reproducir el Proyecto
 
 ### 1. Requisitos del Entorno
 * Python 3.10+
 * OpenJDK 17+ (Java 25 probado)
+* Pytest y Radon (`pip install pytest radon`)
 * Structurizr CLI (`structurizr.sh`) o imagen Docker `structurizr/cli`
 * PlantUML y Graphviz (`plantuml.jar` o Docker `plantuml/plantuml`)
 * Typst CLI (`typst`)
 * Pylint / Pyreverse (`pip install pylint`)
 
-### 2. Validación y Exportación de la Arquitectura C4 (Lab 06)
+### 2. Ejecución de Pruebas Automatizadas y Métricas (Lab 07)
+```bash
+# Ejecutar todas las pruebas unitarias y de caracterización (35 passed)
+pytest -v tests/
+
+# Calcular complejidad ciclomática de los módulos refactorizados
+radon cc -s -a src/sismoreporta/
+
+# Medir métricas de volumen y líneas lógicas de código (SLOC)
+radon raw -s src/sismoreporta/antes/servicio.py src/sismoreporta/servicio.py
+
+# Verificar índice de mantenibilidad (MI)
+radon mi -s src/sismoreporta/servicio.py
+```
+
+### 3. Validación y Exportación de la Arquitectura C4 (Lab 06)
 ```bash
 # Validar la consistencia semántica del modelo DSL
 structurizr.sh validate -w docs/architecture/c4/workspace.dsl
@@ -315,27 +381,26 @@ structurizr.sh validate -w docs/architecture/c4/workspace.dsl
 # Exportar el modelo a C4-PlantUML y Mermaid
 structurizr.sh export -w docs/architecture/c4/workspace.dsl -f plantuml/c4plantuml -o docs/architecture/c4/export
 structurizr.sh export -w docs/architecture/c4/workspace.dsl -f mermaid -o docs/architecture/c4/export
-
-# Renderizar diagramas a imágenes PNG de alta resolución
-docker run --rm -v "$PWD":/work -w /work plantuml/plantuml "docs/architecture/c4/export/*.puml" -o ../img/
-docker run --rm -v "$PWD":/work -w /work plantuml/plantuml docs/architecture/c4/contexto-manual.puml -o img/
 ```
 
-### 3. Renderizado de Diagramas UML (Lab 05)
+### 4. Renderizado de Diagramas UML y Patrones
 ```bash
-java -jar plantuml.jar -tpng docs/design/clases.puml -o img/
-java -jar plantuml.jar -tpng docs/design/secuencia-sincronizar-reporte.puml -o img/
-java -jar plantuml.jar -tpng docs/design/actividades-priorizar-asignar.puml -o img/
-java -jar plantuml.jar -tpng docs/design/paquetes.puml -o img/
-java -jar plantuml.jar -tpng docs/design/estados-reporte.puml -o img/
+# Renderizar diagramas de patrones de diseño (Lab 07)
+java -jar plantuml.jar -Playout=smetana -tpng docs/design/patrones/*.puml -o img/
+
+# Renderizar diagramas de clases generales
+java -jar plantuml.jar -Playout=smetana -tpng docs/design/clases.puml -o img/
 ```
 
-### 4. Compilación de Informes Formales en Typst
+### 5. Compilación de Informes Formales en Typst
 ```bash
 # Compilar informe del Laboratorio 05
 typst compile informe_lab05.typ informe_lab05.pdf
 
 # Compilar informe del Laboratorio 06
 typst compile informe_lab06.typ informe_lab06.pdf
+
+# Compilar informe del Laboratorio 07
+typst compile informe_lab07.typ informe_lab07.pdf
 ```
 
