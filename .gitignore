@@ -21,6 +21,11 @@ __pycache__/
 informe_lab04.*
 informe_lab05.*
 informe_lab06.*
+informe_lab07.pdf
+guia_lab07.txt
+CUESTIONARIO_LAB06.md
 PLANTILLA_LABORATORIO/
 abet.png
 sistemas.png
+.pytest_cache/
+
