@@ -2,7 +2,29 @@
 set namespaceSeparator none
 package "sismoreporta" as sismoreporta {
 }
+package "sismoreporta.canales" as sismoreporta.canales {
+}
+package "sismoreporta.comandos" as sismoreporta.comandos {
+}
 package "sismoreporta.dominio" as sismoreporta.dominio {
 }
+package "sismoreporta.estados" as sismoreporta.estados {
+}
+package "sismoreporta.eventos" as sismoreporta.eventos {
+}
+package "sismoreporta.externos" as sismoreporta.externos {
+}
+package "sismoreporta.ia" as sismoreporta.ia {
+}
+package "sismoreporta.servicio" as sismoreporta.servicio {
+}
 sismoreporta --> sismoreporta.dominio
+sismoreporta.canales --> sismoreporta.externos
+sismoreporta.ia --> sismoreporta.externos
+sismoreporta.servicio --> sismoreporta.canales
+sismoreporta.servicio --> sismoreporta.estados
+sismoreporta.servicio --> sismoreporta.eventos
+sismoreporta.servicio --> sismoreporta.externos
+sismoreporta.servicio --> sismoreporta.ia
+sismoreporta.estados ..> sismoreporta.servicio
 @enduml

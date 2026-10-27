@@ -1,6 +1,18 @@
 @startuml classes_sismoreporta
-!pragma layout smetana
 set namespaceSeparator none
+class "AtendidoState" as sismoreporta.estados.AtendidoState {
+  nombre : str
+}
+class "AuditorEventosSismicos" as sismoreporta.eventos.AuditorEventosSismicos {
+  bandeja : List[str]
+  actualizar(tipo_evento: str, datos: Dict[str, Any]) -> None
+}
+class "BorradorState" as sismoreporta.estados.BorradorState {
+  nombre : str
+  descartar(reporte: Reporte, motivo: str) -> None
+  encolar_offline(reporte: Reporte) -> None
+  sincronizar(reporte: Reporte, fecha: datetime) -> None
+}
 class "Brigada" as sismoreporta.dominio.Brigada {
   codigo_indicativo : str
   disponible : bool
@@ -18,6 +30,42 @@ class "Ciudadano" as sismoreporta.dominio.Ciudadano {
   telefono_contacto : str
   registrar_reporte(descripcion: str, coords: Coordenadas, sev: Severidad) -> Reporte
 }
+class "ClasificadorSeveridadIA" as sismoreporta.ia.ClasificadorSeveridadIA {
+  guardrails
+  proveedor
+  clasificar(descripcion: str) -> str
+}
+class "ClienteLLMAdapter" as sismoreporta.ia.ClienteLLMAdapter {
+  completar(prompt: str) -> str
+}
+class "ClienteLLMSimulado" as sismoreporta.externos.ClienteLLMSimulado {
+  llamadas : int
+  prompts_recibidos : list[str]
+  respuesta_predefinida : Optional[str]
+  generate_text(prompt: str) -> Dict[str, str]
+}
+class "ColaComandosOffline" as sismoreporta.comandos.ColaComandosOffline {
+  pendientes : int
+  encolar(comando: IComando) -> None
+  procesar_lote() -> int
+}
+class "ComandoSincronizarReporte" as sismoreporta.comandos.ComandoSincronizarReporte {
+  ejecutado : bool
+  resultado_estado : Optional[str]
+  ejecutar() -> bool
+}
+class "ConCacheLLM" as sismoreporta.ia.ConCacheLLM {
+  total_en_cache : int
+  completar(prompt: str) -> str
+}
+class "ConReintentos" as sismoreporta.canales.ConReintentos {
+  despachar(reporte_id: str, descripcion: str) -> ResultadoDespacho
+}
+class "Coordenadas" as sismoreporta.servicio.Coordenadas {
+  latitud
+  longitud
+  esta_dentro_de_geocerca() -> bool
+}
 class "Coordenadas" as sismoreporta.dominio.Coordenadas {
   latitud
   longitud
@@ -25,8 +73,31 @@ class "Coordenadas" as sismoreporta.dominio.Coordenadas {
   distancia_hacia(otra: Coordenadas) -> Decimal
   esta_dentro_de_geocerca(poligono_arequipa: str) -> bool
 }
+class "DescartadoState" as sismoreporta.estados.DescartadoState {
+  nombre : str
+}
+class "EncoladoState" as sismoreporta.estados.EncoladoState {
+  nombre : str
+  descartar(reporte: Reporte, motivo: str) -> None
+  sincronizar(reporte: Reporte, fecha: datetime) -> None
+}
 class "EstadoReporte" as sismoreporta.dominio.EstadoReporte {
   name
+}
+class "EstadoReporteState" as sismoreporta.estados.EstadoReporteState {
+  nombre : str
+  atender_incidente(reporte: Reporte) -> None
+  descartar(reporte: Reporte, motivo: str) -> None
+  encolar_offline(reporte: Reporte) -> None
+  sincronizar(reporte: Reporte, fecha: datetime) -> None
+  verificar_triaje(reporte: Reporte, score_prioridad: Decimal) -> None
+}
+class "FabricaCanales" as sismoreporta.canales.FabricaCanales {
+  crear(nombre_canal: str) -> ICanalDespacho
+  registrar(nombre_canal: str, creador: Callable[[], ICanalDespacho]) -> None
+}
+class "FormatoSeveridadValido" as sismoreporta.ia.FormatoSeveridadValido {
+  SEVERIDADES_VALIDAS : list
 }
 class "FotoEvidencia" as sismoreporta.dominio.FotoEvidencia {
   comprimida : bool
@@ -36,8 +107,17 @@ class "FotoEvidencia" as sismoreporta.dominio.FotoEvidencia {
   obtener_ruta_almacenamiento() -> str
   validar_tamanio_maximo(limite_bytes: int) -> bool
 }
+class "Guardrail" as sismoreporta.ia.Guardrail {
+  validar(texto: str) -> str
+}
 class "IBrokerCola" as sismoreporta.dominio.IBrokerCola {
   {abstract}encolar_reporte(canal: str, payload_json: str) -> bool
+}
+class "ICanalDespacho" as sismoreporta.canales.ICanalDespacho {
+  {abstract}despachar(reporte_id: str, descripcion: str) -> ResultadoDespacho
+}
+class "IComando" as sismoreporta.comandos.IComando {
+  {abstract}ejecutar() -> bool
 }
 class "INotificadorEmergencias" as sismoreporta.dominio.INotificadorEmergencias {
   {abstract}enviar_alerta_zonal(distrito: str, mensaje: str) -> None
@@ -48,16 +128,65 @@ class "IRepositorioReportes" as sismoreporta.dominio.IRepositorioReportes {
   {abstract}guardar(reporte: Reporte) -> None
   {abstract}listar_por_estado(estado: EstadoReporte) -> List[Reporte]
 }
+class "NotificadorCOE" as sismoreporta.eventos.NotificadorCOE {
+  bandeja : List[str]
+  actualizar(tipo_evento: str, datos: Dict[str, Any]) -> None
+}
 class "PostgresReporteAdapter" as sismoreporta.dominio.PostgresReporteAdapter {
   connection_string : str
   {abstract}buscar_por_id(id: UUID) -> Optional[Reporte]
   {abstract}guardar(reporte: Reporte) -> None
   {abstract}listar_por_estado(estado: EstadoReporte) -> List[Reporte]
 }
+class "ProveedorLLM" as sismoreporta.ia.ProveedorLLM {
+  {abstract}completar(prompt: str) -> str
+}
+class "PublicadorEventos" as sismoreporta.eventos.PublicadorEventos {
+  desuscribir(tipo_evento: str, suscriptor: Suscriptor) -> None
+  publicar(tipo_evento: str, datos: Dict[str, Any]) -> None
+  suscribir(tipo_evento: str, suscriptor: Suscriptor) -> None
+}
+class "RabbitMQCanalAdapter" as sismoreporta.canales.RabbitMQCanalAdapter {
+  despachar(reporte_id: str, descripcion: str) -> ResultadoDespacho
+}
+class "RabbitMQSDK" as sismoreporta.externos.RabbitMQSDK {
+  fallas : int
+  llamadas : int
+  mensajes : list[Tuple[str, str, bytes]]
+  basic_publish(exchange: str, routing_key: str, body_bytes: bytes) -> Tuple[int, str]
+}
+class "RecibidoState" as sismoreporta.estados.RecibidoState {
+  nombre : str
+  descartar(reporte: Reporte, motivo: str) -> None
+  verificar_triaje(reporte: Reporte, score_prioridad: Decimal) -> None
+}
 class "RedisBrokerAdapter" as sismoreporta.dominio.RedisBrokerAdapter {
   host : str
   puerto : int
   {abstract}encolar_reporte(canal: str, payload_json: str) -> bool
+}
+class "RedisBrokerSDK" as sismoreporta.externos.RedisBrokerSDK {
+  cola : list[dict]
+  fallas : int
+  llamadas : int
+  rpush(canal: str, payload_json: str) -> Dict[str, str | bool]
+}
+class "RedisCanalAdapter" as sismoreporta.canales.RedisCanalAdapter {
+  despachar(reporte_id: str, descripcion: str) -> ResultadoDespacho
+}
+class "Reporte" as sismoreporta.servicio.Reporte {
+  coordenadas
+  descripcion : str
+  estado : str
+  fecha_sincronizacion : Optional[datetime]
+  id : UUID
+  severidad : str
+  atender_incidente() -> None
+  cambiar_estado(nuevo_estado: EstadoReporteState) -> None
+  descartar(motivo: str) -> None
+  encolar_offline() -> None
+  sincronizar(fecha: datetime) -> None
+  verificar_triaje(score_prioridad: Decimal) -> None
 }
 class "Reporte" as sismoreporta.dominio.Reporte {
   brigada_id : Optional[UUID]
@@ -79,6 +208,19 @@ class "Reporte" as sismoreporta.dominio.Reporte {
   sincronizar(fecha: datetime) -> None
   verificar_triaje(score_prioridad: Decimal) -> None
 }
+class "ResultadoDespacho" as sismoreporta.canales.ResultadoDespacho {
+  canal_usado : str
+  exitoso : bool
+  mensaje_id : Optional[str]
+}
+class "ServicioSincronizacion" as sismoreporta.servicio.ServicioSincronizacion {
+  clasificador_ia
+  eventos : List[str]
+  fabrica
+  publicador
+  clasificar_severidad_con_ia(descripcion: str, proveedor: str) -> str
+  sincronizar_reporte(reporte: Reporte, canal: str) -> str
+}
 class "ServicioSincronizacion" as sismoreporta.dominio.ServicioSincronizacion {
   broker
   notificador
@@ -89,6 +231,33 @@ class "ServicioSincronizacion" as sismoreporta.dominio.ServicioSincronizacion {
 class "Severidad" as sismoreporta.dominio.Severidad {
   name
 }
+class "SinAlucinacionMagnitud" as sismoreporta.ia.SinAlucinacionMagnitud {
+  TERMINOS_PROHIBIDOS : list
+}
+class "SinPanicoSocial" as sismoreporta.ia.SinPanicoSocial {
+  FRASES_PANICO : list
+}
+class "SmsSatelitalCanalAdapter" as sismoreporta.canales.SmsSatelitalCanalAdapter {
+  despachar(reporte_id: str, descripcion: str) -> ResultadoDespacho
+}
+class "SmsSatelitalGatewaySDK" as sismoreporta.externos.SmsSatelitalGatewaySDK {
+  fallas : int
+  llamadas : int
+  tramas : list[Tuple[str, str]]
+  transmitir_trama(numero_terminal: str, trama_hex: str) -> bool
+}
+class "Suscriptor" as sismoreporta.eventos.Suscriptor {
+  {abstract}actualizar(tipo_evento: str, datos: Dict[str, Any]) -> None
+}
+class "TableroOperacionesMapa" as sismoreporta.eventos.TableroOperacionesMapa {
+  puntos_actualizados : List[Dict[str, Any]]
+  actualizar(tipo_evento: str, datos: Dict[str, Any]) -> None
+}
+class "VerificadoState" as sismoreporta.estados.VerificadoState {
+  nombre : str
+  atender_incidente(reporte: Reporte) -> None
+  descartar(reporte: Reporte, motivo: str) -> None
+}
 class "ZonaImpacto" as sismoreporta.dominio.ZonaImpacto {
   geocerca_poligono : str
   id : UUID
@@ -98,14 +267,39 @@ class "ZonaImpacto" as sismoreporta.dominio.ZonaImpacto {
   calcular_indice_criticidad() -> Decimal
   registrar_reporte_en_zona(r: Reporte) -> None
 }
+sismoreporta.canales.ConReintentos --|> sismoreporta.canales.ICanalDespacho
+sismoreporta.canales.RabbitMQCanalAdapter --|> sismoreporta.canales.ICanalDespacho
+sismoreporta.canales.RedisCanalAdapter --|> sismoreporta.canales.ICanalDespacho
+sismoreporta.canales.SmsSatelitalCanalAdapter --|> sismoreporta.canales.ICanalDespacho
+sismoreporta.comandos.ComandoSincronizarReporte --|> sismoreporta.comandos.IComando
 sismoreporta.dominio.PostgresReporteAdapter --|> sismoreporta.dominio.IRepositorioReportes
 sismoreporta.dominio.RedisBrokerAdapter --|> sismoreporta.dominio.IBrokerCola
+sismoreporta.estados.AtendidoState --|> sismoreporta.estados.EstadoReporteState
+sismoreporta.estados.BorradorState --|> sismoreporta.estados.EstadoReporteState
+sismoreporta.estados.DescartadoState --|> sismoreporta.estados.EstadoReporteState
+sismoreporta.estados.EncoladoState --|> sismoreporta.estados.EstadoReporteState
+sismoreporta.estados.RecibidoState --|> sismoreporta.estados.EstadoReporteState
+sismoreporta.estados.VerificadoState --|> sismoreporta.estados.EstadoReporteState
+sismoreporta.eventos.AuditorEventosSismicos --|> sismoreporta.eventos.Suscriptor
+sismoreporta.eventos.NotificadorCOE --|> sismoreporta.eventos.Suscriptor
+sismoreporta.eventos.TableroOperacionesMapa --|> sismoreporta.eventos.Suscriptor
+sismoreporta.ia.ClienteLLMAdapter --|> sismoreporta.ia.ProveedorLLM
+sismoreporta.ia.ConCacheLLM --|> sismoreporta.ia.ProveedorLLM
+sismoreporta.ia.FormatoSeveridadValido --|> sismoreporta.ia.Guardrail
+sismoreporta.ia.SinAlucinacionMagnitud --|> sismoreporta.ia.Guardrail
+sismoreporta.ia.SinPanicoSocial --|> sismoreporta.ia.Guardrail
+sismoreporta.servicio.ServicioSincronizacion --> sismoreporta.canales.FabricaCanales : fabrica
 sismoreporta.dominio.Brigada --> sismoreporta.dominio.Coordenadas : ubicacion_actual
 sismoreporta.dominio.Reporte --> sismoreporta.dominio.Coordenadas : coordenadas
 sismoreporta.dominio.Reporte --> sismoreporta.dominio.EstadoReporte : estado
 sismoreporta.dominio.Reporte --> sismoreporta.dominio.Severidad : severidad
 sismoreporta.dominio.ZonaImpacto --> sismoreporta.dominio.Severidad : nivel_riesgo
+sismoreporta.servicio.ServicioSincronizacion --> sismoreporta.eventos.PublicadorEventos : publicador
+sismoreporta.servicio.ServicioSincronizacion --> sismoreporta.ia.ClasificadorSeveridadIA : clasificador_ia
+sismoreporta.ia.ClasificadorSeveridadIA --> sismoreporta.ia.SinAlucinacionMagnitud : guardrails
+sismoreporta.ia.ConCacheLLM --* sismoreporta.ia.ClasificadorSeveridadIA : proveedor
 sismoreporta.dominio.IBrokerCola --o sismoreporta.dominio.ServicioSincronizacion : broker
 sismoreporta.dominio.INotificadorEmergencias --o sismoreporta.dominio.ServicioSincronizacion : notificador
 sismoreporta.dominio.IRepositorioReportes --o sismoreporta.dominio.ServicioSincronizacion : repo
+sismoreporta.servicio.Coordenadas --o sismoreporta.servicio.Reporte : coordenadas
 @enduml

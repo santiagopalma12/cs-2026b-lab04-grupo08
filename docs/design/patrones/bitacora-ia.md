@@ -1,0 +1,19 @@
+# Bitácora de Interacciones con Inteligencia Artificial (E7)
+
+**Asignatura:** Construcción de Software (2026-B)  
+**Grupo:** 08 — SismoReporta AQP  
+**Entregable:** E7 (Trazabilidad y verificación de asistencia con IA)  
+**Regla de Oro:** *La IA propone, el equipo decide y verifica formalmente.*
+
+---
+
+## Registro de Interacciones
+
+| # | Fase del Refactor | Prompt Utilizado (Resumen) | Propuesta de la IA | Decisión y Verificación Humana | Error / Corrección Detectada por Pruebas |
+| :-: | :--- | :--- | :--- | :--- | :--- |
+| **1** | **Detección de olores (E1)** | Prompt IA 1: Analizar `antes/servicio.py` con CC=22 e identificar olores, patrones GoF, principios SOLID y costos. | Propuso 8 patrones: Strategy, Adapter, Decorator, State, Observer, Chain, más **Singleton** para `FabricaCanales` y **Abstract Factory**. | **6 Aceptados, 2 Rechazados:** Se aceptaron los patrones para desacoplar el transporte, ciclo de vida e IA. Se rechazaron Singleton y Abstract Factory por introducir estado global y sobreingeniería (*patternitis*). | N/A (Fase exploratoria previa a la codificación). |
+| **2** | **Canales de transporte (E2)** | Prompt IA 2: Refactorizar únicamente Strategy + Adapter + Decorator de reintentos para `ICanalDespacho`. | Generó `ConReintentos` capturando genéricamente `except Exception:`. | **Corregida:** El equipo identificó que reintentar ante cualquier excepción causaría bucles indebidos ante errores fatales de lógica o serialización. Se acotó estrictamente a `except TimeoutError:`. | **Falla en prueba:** `test_canal_no_soportado_lanza_error` reintentaba 3 veces excepciones de validación en lugar de fallar inmediatamente; se corrigió la captura selectiva. |
+| **3** | **Ciclo de vida (E3)** | Diseñar el patrón State a partir del diagrama `estados-reporte.mmd` del Laboratorio 05. | Sugirió una tabla de transiciones con un diccionario de tuplas `(estado_origen, evento) -> estado_destino`. | **Rechazada a favor de clases State:** La tabla con diccionario es procedural y no permite polimorfismo ni comportamiento específico por estado. Se implementó la jerarquía clásica `EstadoReporteState` donde las transiciones ilegales se prohíben por construcción. | La verificación manual con `test_state_impide_transiciones_invalidas` confirmó que intentar sincronizar desde `ATENDIDO` o `DESCARTADO` eleva `ValueError`. |
+| **4** | **Observer de eventos (E4)** | Implementar notificaciones desacopladas para alertas COE, auditoría y mapa de calor. | Propuso instalar dependencias externas asíncronas (`RxPY` o brokers externos pesados). | **Rechazada dependencia externa:** Se aplicó la regla de contención de dependencias, creando un `PublicadorEventos` nativo en Python en solo 40 líneas. | Las pruebas `test_observer_nuevo_suscriptor_sin_tocar_servicio` pasaron en 0.01 s con cero dependencias externas. |
+| **5** | **Guardrails de IA (E5)** | Sugerir estrategia para evitar que el LLM emita datos no confiables en emergencias sísmicas. | Sugirió utilizar un segundo LLM ("LLM-as-a-Judge") para evaluar y validar la respuesta del primer modelo. | **Rechazada:** En un contexto de desastre con ancho de banda colapsado en Arequipa, invocar un segundo LLM duplica la latencia y el costo por token. Se optó por una cadena determinista de reglas (`SinAlucinacionMagnitud`, `SinPanicoSocial`, `FormatoSeveridadValido`). | Las pruebas `test_guardrail_bloquea_alucinacion_de_magnitud` y `test_guardrail_bloquea_panico_social` interceptaron de inmediato las respuestas no conformes. |
+| **6** | **Diagramación PlantUML (E7)** | Generar diagramas de clases PlantUML con estereotipos formales (`<<Strategy>>`, `<<Adapter>>`, etc.). | Entregó diagramas con sintaxis estándar de PlantUML. | **Aceptada con ajustes:** Se agregó `!pragma layout smetana` para permitir compilación nativa en entornos Linux sin binario externo de Graphviz `dot`. | Verificado exitosamente con `java -jar plantuml.jar` generando 5 imágenes PNG conformes. |

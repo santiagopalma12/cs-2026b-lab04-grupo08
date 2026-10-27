@@ -1,0 +1,63 @@
+@startuml chain-guardrails-ia
+skinparam monochrome false
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam defaultFontName "Liberation Sans", Arial, sans-serif
+skinparam classFontSize 10
+skinparam roundCorner 6
+
+title SismoReporta AQP — Componente de IA (Strategy, Adapter, Decorator y Chain of Responsibility)
+
+class ClasificadorSeveridadIA <<Context>> {
+  - proveedor: ProveedorLLM
+  - guardrails: Guardrail
+  + clasificar(descripcion: str): str
+}
+
+interface ProveedorLLM <<Strategy>> {
+  {abstract} + completar(prompt: str): str
+}
+
+class ClienteLLMAdapter <<Adapter>> {
+  - _sdk: ClienteLLMSimulado
+  + completar(prompt: str): str
+}
+
+class ConCacheLLM <<Decorator>> {
+  - _interno: ProveedorLLM
+  - _cache: Dict[str, str]
+  + completar(prompt: str): str
+}
+
+abstract class Guardrail <<Handler>> {
+  - _siguiente: Guardrail
+  + validar(texto: str): str
+  {abstract} # _aplicar(texto: str): str
+}
+
+class SinAlucinacionMagnitud <<ConcreteHandler>> {
+  # _aplicar(texto: str): str
+}
+
+class SinPanicoSocial <<ConcreteHandler>> {
+  # _aplicar(texto: str): str
+}
+
+class FormatoSeveridadValido <<ConcreteHandler>> {
+  # _aplicar(texto: str): str
+}
+
+ClasificadorSeveridadIA --> ProveedorLLM : "completar(prompt)"
+ClasificadorSeveridadIA --> Guardrail : "validar(salida)"
+
+ProveedorLLM <|.. ClienteLLMAdapter
+ProveedorLLM <|.. ConCacheLLM
+ConCacheLLM o--> ProveedorLLM : "envuelve"
+
+Guardrail <|-- SinAlucinacionMagnitud
+Guardrail <|-- SinPanicoSocial
+Guardrail <|-- FormatoSeveridadValido
+
+Guardrail o--> Guardrail : "_siguiente"
+
+@enduml

@@ -1,0 +1,73 @@
+@startuml strategy-adapter-factory
+skinparam monochrome false
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam defaultFontName "Liberation Sans", Arial, sans-serif
+skinparam classFontSize 10
+skinparam roundCorner 6
+
+title SismoReporta AQP — Patrones Strategy, Adapter, Decorator y Factory (Canales de Despacho)
+
+class ServicioSincronizacion <<Context>> {
+  + sincronizar_reporte(reporte: Reporte, canal: str): str
+}
+
+interface ICanalDespacho <<Strategy>> {
+  {abstract} + despachar(reporte_id: str, descripcion: str): ResultadoDespacho
+}
+
+class ConReintentos <<Decorator>> {
+  - _interno: ICanalDespacho
+  - _intentos: int
+  + despachar(reporte_id: str, descripcion: str): ResultadoDespacho
+}
+
+class FabricaCanales <<Factory>> {
+  - _creadores: Dict[str, Callable]
+  + registrar(nombre_canal: str, creador: Callable): void
+  + crear(nombre_canal: str): ICanalDespacho
+}
+
+class RedisCanalAdapter <<Adapter>> {
+  - _sdk: RedisBrokerSDK
+  + despachar(reporte_id: str, descripcion: str): ResultadoDespacho
+}
+
+class RabbitMQCanalAdapter <<Adapter>> {
+  - _sdk: RabbitMQSDK
+  + despachar(reporte_id: str, descripcion: str): ResultadoDespacho
+}
+
+class SmsSatelitalCanalAdapter <<Adapter>> {
+  - _sdk: SmsSatelitalGatewaySDK
+  + despachar(reporte_id: str, descripcion: str): ResultadoDespacho
+}
+
+class RedisBrokerSDK <<Adaptee>> {
+  + rpush(canal: str, payload_json: str): dict
+}
+
+class RabbitMQSDK <<Adaptee>> {
+  + basic_publish(exchange: str, key: str, body: bytes): tuple
+}
+
+class SmsSatelitalGatewaySDK <<Adaptee>> {
+  + transmitir_trama(terminal: str, trama_hex: str): bool
+}
+
+ServicioSincronizacion --> FabricaCanales : "solicita estrategia"
+ServicioSincronizacion ..> ICanalDespacho : "invoca despachar()"
+FabricaCanales ..> ConReintentos : "crea envuelto en reintentos"
+
+ICanalDespacho <|.. ConReintentos
+ConReintentos o--> ICanalDespacho : "envuelve (decorador)"
+
+ICanalDespacho <|.. RedisCanalAdapter
+ICanalDespacho <|.. RabbitMQCanalAdapter
+ICanalDespacho <|.. SmsSatelitalCanalAdapter
+
+RedisCanalAdapter --> RedisBrokerSDK : "delega a"
+RabbitMQCanalAdapter --> RabbitMQSDK : "delega a"
+SmsSatelitalCanalAdapter --> SmsSatelitalGatewaySDK : "delega a"
+
+@enduml

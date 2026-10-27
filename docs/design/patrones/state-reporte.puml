@@ -1,0 +1,75 @@
+@startuml state-reporte
+skinparam monochrome false
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam defaultFontName "Liberation Sans", Arial, sans-serif
+skinparam classFontSize 10
+skinparam roundCorner 6
+
+title SismoReporta AQP — Patrón State (Ciclo de Vida de la Entidad Reporte)
+
+class Reporte <<Context>> {
+  - _estado: EstadoReporteState
+  + estado: str
+  + encolar_offline(): void
+  + sincronizar(fecha: datetime): void
+  + verificar_triaje(score: Decimal): void
+  + atender_incidente(): void
+  + descartar(motivo: str): void
+  + cambiar_estado(nuevo: EstadoReporteState): void
+}
+
+abstract class EstadoReporteState <<State>> {
+  + {static} nombre: str
+  + encolar_offline(r: Reporte): void
+  + sincronizar(r: Reporte, fecha: datetime): void
+  + verificar_triaje(r: Reporte, score: Decimal): void
+  + atender_incidente(r: Reporte): void
+  + descartar(r: Reporte, motivo: str): void
+}
+
+class BorradorState <<ConcreteState>> {
+  + nombre = "BORRADOR"
+  + encolar_offline(r: Reporte): void
+  + sincronizar(r: Reporte, fecha: datetime): void
+  + descartar(r: Reporte, motivo: str): void
+}
+
+class EncoladoState <<ConcreteState>> {
+  + nombre = "ENCOLADO"
+  + sincronizar(r: Reporte, fecha: datetime): void
+  + descartar(r: Reporte, motivo: str): void
+}
+
+class RecibidoState <<ConcreteState>> {
+  + nombre = "RECIBIDO"
+  + verificar_triaje(r: Reporte, score: Decimal): void
+  + descartar(r: Reporte, motivo: str): void
+}
+
+class VerificadoState <<ConcreteState>> {
+  + nombre = "VERIFICADO"
+  + atender_incidente(r: Reporte): void
+  + descartar(r: Reporte, motivo: str): void
+}
+
+class AtendidoState <<ConcreteState>> {
+  + nombre = "ATENDIDO"
+  ' Terminal: todas las transiciones prohibidas
+}
+
+class DescartadoState <<ConcreteState>> {
+  + nombre = "DESCARTADO"
+  ' Terminal: todas las transiciones prohibidas
+}
+
+Reporte o--> EstadoReporteState : "delega transiciones a"
+
+EstadoReporteState <|-- BorradorState
+EstadoReporteState <|-- EncoladoState
+EstadoReporteState <|-- RecibidoState
+EstadoReporteState <|-- VerificadoState
+EstadoReporteState <|-- AtendidoState
+EstadoReporteState <|-- DescartadoState
+
+@enduml

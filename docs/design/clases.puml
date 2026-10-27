@@ -11,137 +11,128 @@ skinparam interfaceBorderColor #B26B00
 skinparam enumBackgroundColor #F3E5F5
 skinparam enumBorderColor #6A1B9A
 
-title SismoReporta AQP — Diagrama de Clases (Módulos Ingesta, Triaje y Brigadas)
-
-enum EstadoReporte {
-  BORRADOR
-  ENCOLADO
-  RECIBIDO
-  VERIFICADO
-  ATENDIDO
-  DESCARTADO
-}
-
-enum Severidad {
-  LEVE
-  MODERADA
-  GRAVE
-  CATASTROFICA
-}
+title SismoReporta AQP — Diagrama de Clases Refactorizado hacia Patrones GoF (Lab 07)
 
 class Coordenadas <<ValueObject>> {
   - latitud: Decimal
   - longitud: Decimal
-  - precisionMetros: Decimal
-  + estaDentroDeGeocerca(poligonoArequipa: String): bool
-  + distanciaHacia(otra: Coordenadas): Decimal
+  + estaDentroDeGeocerca(): bool
 }
 
-class FotoEvidencia {
+class Reporte <<Context>> {
   - id: UUID
-  - hashSha256: String
-  - tamanioBytes: int
-  - comprimida: bool
-  + validarTamanioMaximo(limiteBytes: int): bool
-  + obtenerRutaAlmacenamiento(): String
-}
-
-class Ciudadano {
-  - id: UUID
-  - identificadorAnonimo: String
-  - telefonoContacto: String
-  + registrarReporte(descripcion: String, coords: Coordenadas, sev: Severidad): Reporte
-}
-
-class Reporte {
-  - id: UUID
-  - fechaCreacion: DateTime
   - fechaSincronizacion: DateTime
   - descripcion: String
-  - severidad: Severidad
-  - estado: EstadoReporte
-  - reintentosSync: int
-  + guardarBorrador(): void
-  + encolarOffline(): void
+  - severidad: String
+  - _estado: EstadoReporteState
+  + estado: String
+  + cambiar_estado(nuevo: EstadoReporteState): void
+  + encolar_offline(): void
   + sincronizar(fecha: DateTime): void
-  + verificarTriaje(scorePrioridad: Decimal): void
-  + asignarBrigada(brigadaId: UUID): void
-  + atenderIncidente(): void
+  + verificar_triaje(scorePrioridad: Decimal): void
+  + atender_incidente(): void
   + descartar(motivo: String): void
-  + adjuntarFoto(foto: FotoEvidencia): void
 }
 
-class ZonaImpacto {
-  - id: UUID
-  - nombreDistrito: String
-  - geocercaPoligono: String
-  - nivelRiesgo: Severidad
-  + registrarReporteEnZona(r: Reporte): void
-  + calcularIndiceCriticidad(): Decimal
+abstract class EstadoReporteState <<State>> {
+  + {static} nombre: String
+  + encolar_offline(r: Reporte): void
+  + sincronizar(r: Reporte, fecha: DateTime): void
+  + verificar_triaje(r: Reporte, score: Decimal): void
+  + atender_incidente(r: Reporte): void
+  + descartar(r: Reporte, motivo: String): void
 }
 
-class Brigada {
-  - id: UUID
-  - codigoIndicativo: String
-  - especialidad: String
-  - disponible: bool
-  + asignarMision(reporteId: UUID): void
-  + finalizarAtencion(): void
-  + actualizarUbicacion(coords: Coordenadas): void
+class BorradorState <<ConcreteState>>
+class EncoladoState <<ConcreteState>>
+class RecibidoState <<ConcreteState>>
+class VerificadoState <<ConcreteState>>
+class AtendidoState <<ConcreteState>>
+class DescartadoState <<ConcreteState>>
+
+EstadoReporteState <|-- BorradorState
+EstadoReporteState <|-- EncoladoState
+EstadoReporteState <|-- RecibidoState
+EstadoReporteState <|-- VerificadoState
+EstadoReporteState <|-- AtendidoState
+EstadoReporteState <|-- DescartadoState
+Reporte o--> EstadoReporteState : "delega a"
+
+interface ICanalDespacho <<Strategy>> {
+  + despachar(reporte_id: String, descripcion: String): ResultadoDespacho
 }
 
-interface IBrokerCola <<puerto>> {
-  + encolarReporte(canal: String, payloadJson: String): bool
+class ConReintentos <<Decorator>> {
+  - _interno: ICanalDespacho
+  - _intentos: int
+  + despachar(reporte_id: String, descripcion: String): ResultadoDespacho
 }
 
-interface IRepositorioReportes <<puerto>> {
-  + buscarPorId(id: UUID): Reporte
-  + guardar(reporte: Reporte): void
-  + listarPorEstado(estado: EstadoReporte): List<Reporte>
+class FabricaCanales <<Factory>> {
+  + registrar(nombre: String, creador: Callable): void
+  + crear(nombre: String): ICanalDespacho
 }
 
-interface INotificadorEmergencias <<puerto>> {
-  + enviarAlertaZonal(distrito: String, mensaje: String): void
-  + notificarDespachoBrigada(brigadaId: UUID, reporteId: UUID): void
+class RedisCanalAdapter <<Adapter>>
+class RabbitMQCanalAdapter <<Adapter>>
+class SmsSatelitalCanalAdapter <<Adapter>>
+
+ICanalDespacho <|.. ConReintentos
+ICanalDespacho <|.. RedisCanalAdapter
+ICanalDespacho <|.. RabbitMQCanalAdapter
+ICanalDespacho <|.. SmsSatelitalCanalAdapter
+ConReintentos o--> ICanalDespacho : "decora"
+FabricaCanales ..> ICanalDespacho : "instancia"
+
+class PublicadorEventos <<Subject>> {
+  + suscribir(tipo: String, suscriptor: Suscriptor): void
+  + publicar(tipo: String, datos: Dict): void
 }
 
-class RedisBrokerAdapter <<adaptador>> {
-  - host: String
-  - puerto: int
-  + encolarReporte(canal: String, payloadJson: String): bool
+interface Suscriptor <<Observer>> {
+  + actualizar(tipo: String, datos: Dict): void
 }
 
-class PostgresReporteAdapter <<adaptador>> {
-  - connectionString: String
-  + buscarPorId(id: UUID): Reporte
-  + guardar(reporte: Reporte): void
-  + listarPorEstado(estado: EstadoReporte): List<Reporte>
+class NotificadorCOE <<ConcreteObserver>>
+class AuditorEventosSismicos <<ConcreteObserver>>
+
+Suscriptor <|.. NotificadorCOE
+Suscriptor <|.. AuditorEventosSismicos
+PublicadorEventos o--> Suscriptor : "notifica a"
+
+class ClasificadorSeveridadIA {
+  - proveedor: ProveedorLLM
+  - guardrails: Guardrail
+  + clasificar(descripcion: String): String
 }
 
-class ServicioSincronizacion <<servicio>> {
-  + sincronizarReporte(reporte: Reporte): bool
-  + procesarLoteOffline(reportes: List<Reporte>): int
-  + reintentarFallidos(): void
+interface ProveedorLLM <<Strategy>> {
+  + completar(prompt: String): String
 }
 
-' Relaciones y Multiplicidades (Regla C3 y C5)
-Ciudadano "1" -- "0..*" Reporte : registra >
-Reporte "1" *-- "1" Coordenadas : ubicado en >
-Reporte "1" *-- "0..3" FotoEvidencia : adjunta >
-Reporte --> EstadoReporte : posee
-Reporte --> Severidad : clasificado como
-ZonaImpacto "1" o-- "0..*" Reporte : agrupa >
-ZonaImpacto "1" -- "0..*" Brigada : asignada a >
-Brigada "0..1" -- "0..*" Reporte : asiste >
-Brigada "1" *-- "1" Coordenadas : posicionada en >
+class ConCacheLLM <<Decorator>>
+class ClienteLLMAdapter <<Adapter>>
+abstract class Guardrail <<ChainOfResponsibility>> {
+  - _siguiente: Guardrail
+  + validar(texto: String): String
+}
 
-' Realización de Puertos / Interfaces (ADR-001)
-IBrokerCola <|.. RedisBrokerAdapter
-IRepositorioReportes <|.. PostgresReporteAdapter
+ProveedorLLM <|.. ClienteLLMAdapter
+ProveedorLLM <|.. ConCacheLLM
+ClasificadorSeveridadIA --> ProveedorLLM
+ClasificadorSeveridadIA --> Guardrail
 
-' Dependencias de Servicios
-ServicioSincronizacion ..> Reporte : gestiona
-ServicioSincronizacion ..> IBrokerCola : publica en
-ServicioSincronizacion ..> IRepositorioReportes : persiste en
-ServicioSincronizacion ..> INotificadorEmergencias : emite alertas con
+class ServicioSincronizacion <<Service>> {
+  - fabrica: FabricaCanales
+  - publicador: PublicadorEventos
+  - clasificador_ia: ClasificadorSeveridadIA
+  + sincronizar_reporte(reporte: Reporte, canal: String): String
+  + clasificar_severidad_con_ia(descripcion: String): String
+}
+
+ServicioSincronizacion ..> Reporte : "orquesta"
+ServicioSincronizacion --> FabricaCanales : "resuelve canal"
+ServicioSincronizacion --> PublicadorEventos : "emite eventos"
+ServicioSincronizacion --> ClasificadorSeveridadIA : "clasifica daños"
+
 @enduml

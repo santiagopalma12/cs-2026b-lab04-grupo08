@@ -1,0 +1,40 @@
+@startuml command-offline
+skinparam monochrome false
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam defaultFontName "Liberation Sans", Arial, sans-serif
+skinparam classFontSize 10
+skinparam roundCorner 6
+
+title SismoReporta AQP — Patrón Command (Encolamiento Offline y Sincronización Diferida)
+
+class ColaComandosOffline <<Invoker>> {
+  - _cola: List[IComando]
+  - _historial: List[IComando]
+  + encolar(comando: IComando): void
+  + pendientes: int
+  + procesar_lote(): int
+}
+
+interface IComando <<Command>> {
+  {abstract} + ejecutar(): bool
+}
+
+class ComandoSincronizarReporte <<ConcreteCommand>> {
+  - _servicio: ServicioSincronizacion
+  - _reporte: Reporte
+  - _canal: str
+  + ejecutado: bool
+  + resultado_estado: str
+  + ejecutar(): bool
+}
+
+class ServicioSincronizacion <<Receiver>> {
+  + sincronizar_reporte(reporte: Reporte, canal: str): str
+}
+
+ColaComandosOffline o--> IComando : "encola 0..*"
+IComando <|.. ComandoSincronizarReporte
+ComandoSincronizarReporte --> ServicioSincronizacion : "delega sincronizar_reporte()"
+
+@enduml
