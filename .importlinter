@@ -1,0 +1,21 @@
+[importlinter]
+root_package = sismoreporta
+
+[importlinter:contract:capas]
+name = FF-01 Capas del monolito modular sin ciclos (ADR-001)
+type = layers
+layers =
+    sismoreporta.servicio
+    sismoreporta.canales | sismoreporta.ia | sismoreporta.comandos | sismoreporta.eventos | sismoreporta.estados
+    sismoreporta.dominio
+
+[importlinter:contract:puertos]
+name = FF-02 Dominio y estados aislados de adaptadores externos (ADR-005)
+type = forbidden
+source_modules =
+    sismoreporta.dominio
+    sismoreporta.estados
+    sismoreporta.comandos
+    sismoreporta.eventos
+forbidden_modules =
+    sismoreporta.externos

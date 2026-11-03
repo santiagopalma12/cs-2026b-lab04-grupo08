@@ -10,17 +10,16 @@ from __future__ import annotations
 from abc import ABC
 from datetime import datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING
+from typing import Any
 
-if TYPE_CHECKING:
-    from sismoreporta.servicio import Reporte
+Reporte = Any  # Tipo desacoplado para satisfacer firmas sin acoplarse a la capa de servicio
 
 
 class EstadoReporteState(ABC):
     """Clase base abstracta (STATE) que prohíbe transiciones por defecto."""
     nombre: str = "DESCONOCIDO"
 
-    def encolar_offline(self, reporte: Reporte) -> None:
+    def encolar_offline(self, reporte: Any) -> None:
         raise ValueError(f"No se puede encolar un reporte en estado {self.nombre}")
 
     def sincronizar(self, reporte: Reporte, fecha: datetime) -> None:
