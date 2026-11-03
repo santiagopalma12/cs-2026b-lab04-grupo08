@@ -60,6 +60,45 @@ Los riesgos identificados por el evaluador se clasifican en una escala de 1 a 5:
 * **Zona de Atención (Severidad $8 \le S \le 11$):** R1 (Saturación de memoria en Redis ante caída de workers, severidad 10), R4 (Fuga entre distritos por política RLS, severidad 8).
 * **Zona Aceptable / Descartado (Severidad $< 8$):** R5 (Falso positivo de la IA sobre escalabilidad de Celery, severidad 2).
 
-### 3.4 Conclusiones y Plan de Acción para Iteraciones 2 y 3 (ADD E4)
-1. **Iteración 2 (Disponibilidad - QA-02):** Mitigar directamente el riesgo crítico **R3** (Tormenta de reintentos) y asegurar el escenario QA-02 mediante la implementación y simulación estocástica del patrón **Client-side Circuit Breaker con Exponential Backoff y Jitter**, respaldado por **Outbox Pattern**.
-2. **Iteración 3 (Seguridad y Modificabilidad - QA-04 / QA-05):** Mitigar el riesgo **R4** mediante el diseño detallado de **PostgreSQL Row-Level Security (RLS)** con claims JWT de distrito y la validación mediante fitness function automatizada.
+![Matriz de Riesgos ATAM-lite](diagramas/img/riesgos.png)
+
+*Figura: Matriz de probabilidad e impacto generada con matplotlib (fitness/matriz_riesgos.py).*
+
+---
+
+## 4. Estrategias de Mitigación para los Riesgos de la Zona Crítica y de Atención
+
+### 4.1 Mitigación de Riesgos Críticos (Severidad $\ge 12$)
+
+#### Riesgo R3: Tormenta de Reintentos (*Thundering Herd*) tras Reconexión Masiva (Severidad: 16)
+* **Escenario:** Al restablecerse las antenas celulares 4G o el broker de backend, 15 000 terminales móviles intentan simultáneamente vaciar su Outbox local, saturando los sockets de Nginx y colapsando el API Gateway.
+* **Táctica de Mitigación Implementada:**
+  1. **Circuit Breaker del Cliente:** El cliente conmuta a estado `ABIERTO` tras 3 fallos consecutivos, suspendiendo las llamadas a la red.
+  2. **Exponential Backoff con Jitter Aleatorio:** En lugar de reintentos fijos, cada cliente calcula un retardo:
+     $$T_{\text{reintento}} = \min(T_{\max}, T_{\text{base}} \times 2^{\text{intento}}) + \text{random}(0, \text{Jitter})$$
+     con retardos distribuidos uniformemente entre 5 y 60 segundos, aplanando completamente el pico de reconexión.
+  3. **Rate Limiting Perimetral en NGINX:** Cuota máxima de 50 req/s por bloque de IP para impedir inanición de recursos.
+* **Evidencia Numérica:** La simulación Monte Carlo demostró una reducción del 97.3% en peticiones inútiles durante la interrupción (de 450 a 12 peticiones).
+
+#### Riesgo R2: Punto Único de Falla (SPOF) en Instancia Única de PostgreSQL / VPS (Severidad: 12)
+* **Escenario:** El servidor VPS en la nube sufre una falla de hardware físico o corte del proveedor durante el desastre, inhabilitando la base de datos central.
+* **Táctica de Mitigación Aceptada para el MVP:**
+  1. **Snapshots Horarios Automatizados:** Copias de seguridad atómicas en almacenamiento en bloque independiente del hipervisor.
+  2. **Estrategia Offline-First en Clientes:** La PWA preserva los reportes en el almacenamiento persistente IndexedDB del dispositivo del usuario con cuota garantizada de 5 MB por tiempo indefinido.
+  3. **Plan de Contingencia (Standby Frío):** Script de infraestructura como código (Docker Compose + restore) capaz de provisionar un nuevo VPS en un proveedor alterno en un tiempo de recuperación objetivo $\text{MTTR} \le 15\text{ minutos}$ (registrado formalmente para fase post-MVP).
+
+### 4.2 Mitigación de Riesgos en Zona de Atención (Severidad 8 a 11)
+
+#### Riesgo R1: Desborde de Memoria en Redis ante Parada de Background Workers (Severidad: 10)
+* **Mitigación:** Configuración estricta de Redis: `maxmemory 512mb` y directiva `maxmemory-policy noeviction` con persistencia `appendonly yes` (AOF) en volumen SSD. Veinte mil reportes ciudadanos ligeros insumen menos de 10 MB de memoria volátil, dejando más de 500 MB de margen para buffers. Monitoreo activo con alertas al 70% de uso.
+
+#### Riesgo R4: Fuga de Reportes entre Distritos por Error en Query SQL (Severidad: 8)
+* **Mitigación:** Activación de **Row-Level Security (RLS)** forzada en el motor PostgreSQL. Ninguna consulta SQL de FastAPI puede eludir el filtro distrital, garantizado por la fitness function `test_ff06_aislamiento_rls_distrital` en CI.
+
+### 4.3 Refutación de Falso Positivo de la IA (R5: "Celery no escala para 20 000 req/h")
+* **Afirmación del Evaluador IA:** *"El worker de Celery en Python será el cuello de botella y no podrá procesar 20 000 reportes por culpa del GIL; se requiere migrar a microservicios en Go o Rust."*
+* **Refutación Técnica con Evidencia:**
+  * En una hora hay 3,600 segundos; 20 000 reportes representan una tasa media de **5.56 reportes/segundo**.
+  * Cada worker Celery procesa entre 80 y 150 tareas de persistencia/segundo en PostgreSQL. Con 4 workers Celery, la capacidad del backend es de **>400 reportes/segundo**, superando por más de un orden de magnitud la ráfaga pico de 28 req/s.
+  * La IA confundió 20 000 solicitudes por segundo con 20 000 por hora. El equipo rechazó la sobreingeniería de microservicios con base en mediciones concretas.
+
