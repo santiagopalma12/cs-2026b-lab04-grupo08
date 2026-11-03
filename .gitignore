@@ -18,14 +18,19 @@ __pycache__/
 
 # Local assignment PDF and report source
 *.pdf
+*.zip
 informe_lab04.*
 informe_lab05.*
 informe_lab06.*
-informe_lab07.pdf
+informe_lab07.*
+informe_lab08.pdf
 guia_lab07.txt
+guia_lab08.txt
+CUESTIONARIO_LAB05.md
 CUESTIONARIO_LAB06.md
 PLANTILLA_LABORATORIO/
 abet.png
 sistemas.png
 .pytest_cache/
+.importlinter_cache/
 
