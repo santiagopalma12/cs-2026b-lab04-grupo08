@@ -1,150 +1,155 @@
-# Cuestionario Oficial — Laboratorio 07: Patrones de Diseño con IA
+# Cuestionario Oficial — Laboratorio 08: Diseño Arquitectónico con ADD, ATAM-lite y Fitness Functions
 
 **Asignatura:** Construcción de Software (2026-B)  
 **Grupo:** 08 — SismoReporta AQP  
 **Integrantes:**  
 - Santiago Palma (`spalmaa@unsa.edu.pe`)  
 - Dario Rafael Cornejo Hurtado (`dcornejohu@unsa.edu.pe`)  
-**Docente:** Mg. Alexander Javier Benavides Rojas
+**Docente:** Mg. Alexander Javier Benavides Rojas  
+**Fecha:** 31 de Octubre de 2026  
 
 ---
 
-### Pregunta 1: ¿Qué diferencia hay entre un patrón arquitectónico (Laboratorio 04) y un patrón de diseño? Dé un ejemplo de cada uno en su caso.
+### Pregunta 1: ¿En qué se diferencia diseñar la arquitectura con ADD de elegir un estilo arquitectónico como en el Laboratorio 04?
 
 **Respuesta:**  
-La diferencia radica fundamentalmente en el **alcance (scope), nivel de abstracción y escala de impacto** en el ciclo de vida del software:
+La diferencia radica en que **elegir un estilo arquitectónico** (Lab 04) es una decisión macroscópica de una sola vez que establece la estructura global de alto nivel (por ejemplo, seleccionar un *Monolito Modular* frente a *Microservicios* o *Serverless*), mientras que **diseñar con Attribute-Driven Design (ADD 3.0)** (Lab 08) es un **proceso iterativo, guiado y sistemático** de refinamiento paso a paso, cuyo motor son los atributos de calidad concretos expresados en escenarios medibles:
 
-- **Patrón Arquitectónico (Laboratorio 04):** Define la estructura macroscópica de todo el sistema, estableciendo las divisiones de subsistemas, los límites de despliegue, la topología de red, los mecanismos de persistencia y las estrategias globales para satisfacer atributos de calidad (drivers y escenarios QA). Tiene un alto costo de reversión.
-  - *Ejemplo en SismoReporta AQP:* El patrón **Monolito Modular Asíncrono con Buffer en Memoria (ADR-001)**. Organiza todo el software en un único artefacto desplegable en Python estructurado en módulos desacoplados (*Ingesta*, *Triaje*, *Brigadas*, *GIS*), utilizando Redis como buffer no bloqueante para absorber 20,000 peticiones en la primera hora post-terremoto ($p95 \le 1.5\text{ s}$). Afecta la infraestructura física, los pipelines de CI/CD y los protocolos de comunicación (`RESP`, `SQL/TCP`, `HTTPS`).
-
-- **Patrón de Diseño (Laboratorio 07):** Resuelve problemas recurrentes de diseño a nivel microscópico dentro de un módulo, estructurando la relación, creación y colaboración entre clases y objetos en el código fuente. Aplica directamente los principios SOLID (*"programar contra interfaces"*, *"composición sobre herencia"*). Su alcance es local y su refactorización no altera la arquitectura global.
-  - *Ejemplo en SismoReporta AQP:* El patrón **Strategy + Adapter (`ICanalDespacho`)** en el módulo de Ingesta. Encapsula los algoritmos intercambiables de transporte de reportes (Redis, RabbitMQ, SMS Satelital, Mesh LoRa). Su impacto se circunscribe a la forma en que `ServicioSincronizacion` despacha un paquete sin acoplarse a los métodos `rpush()`, `basic_publish()` o `transmitir_trama()` de los SDKs externos.
+1. **Granularidad y Enfoque:**
+   - En el Laboratorio 04, el estilo arquitectónico se seleccionó para acotar el universo de diseño respondiendo a restricciones globales (plazo de 1 mes, presupuesto de 1 VPS de \$15 USD/mes, equipo de 2 ingenieros). El estilo actúa como marco contenedor (*coarse-grained*).
+   - En ADD 3.0 (Cervantes y Kazman, 2016; Bass et al., 2021), no se asume que el estilo resuelve mágicamente la calidad. En cada iteración se toma un elemento del sistema y se le aplican **tácticas arquitectónicas específicas** (ej. *Buffer asíncrono con Fast ACK*, *Circuit Breaker*, *Row-Level Security*) para satisfacer un escenario cuantificable prioritario ($p95 \le 1.5\text{ s}$, 0 pérdidas).
+2. **Evidencia y Decisiones Fundamentadas:**
+   - En la elección de estilo se compara conceptualmente con matrices ponderadas. En ADD, cada decisión táctica exige **evidencia cuantitativa experimental** (simulación estocástica M/G/c, modelo Monte Carlo o prototipo medido) que demuestre que el escenario se cumple antes de comprometer la decisión en un ADR.
+3. **Evolución:**
+   - ADD permite descomponer contenedores en componentes e interfaces de forma progresiva a lo largo de 7 pasos formales, adaptando el sistema ante escenarios de crecimiento sin necesidad de derribar el estilo arquitectónico base.
 
 ---
 
-### Pregunta 2: Explique con su código cómo Strategy materializa el principio abierto/cerrado. ¿Qué tuvo que modificar para agregar una variante nueva?
+### Pregunta 2: ¿Para qué sirve calificar los escenarios con (importancia, dificultad)? ¿Qué escenario de su árbol tiene la mayor prioridad y por qué?
 
 **Respuesta:**  
-El Principio Abierto/Cerrado (OCP - Bertrand Meyer / Robert C. Martin) establece que las entidades de software deben estar **abiertas para su extensión, pero cerradas para su modificación**.
+La calificación bidimensional **(Importancia para el Negocio / Stakeholders, Dificultad Técnica de Implementación)** en escala High (H), Medium (M), Low (L) cumple una función estratégica fundamental en la priorización arquitectónica:
 
-En la versión antes (`antes/servicio.py`), incorporar un nuevo canal de contingencia (como radios de largo alcance Mesh LoRa) obligaba a violar OCP: era mandatorio editar `sincronizar_reporte()`, añadir una nueva rama `elif canal == "MESH_LORA":` con su bucle de reintentos duplicado, y arriesgar regresiones en los canales existentes.
+- **Propósito Metodológico:**
+  Permite clasificar los escenarios en una matriz de cuatro cuadrantes. Los escenarios calificados como **(H, H)** representan el **núcleo crítico del riesgo arquitectónico** (*architecturally significant requirements - ASR*). Estos escenarios son los primeros que deben abordarse en las primeras iteraciones de ADD, ya que determinan las decisiones no reversibles de la arquitectura. Intentar resolver escenarios de baja dificultad o baja importancia al inicio pospone los riesgos mayores al final del proyecto, aumentando la probabilidad de colapso (*fail late*).
 
-Con el patrón Strategy (`canales.py`), la variación se encapsula detrás de la abstracción `ICanalDespacho`:
-```python
-class ICanalDespacho(ABC):
-    @abstractmethod
-    def despachar(self, reporte_id: str, descripcion: str) -> ResultadoDespacho:
-        ...
-```
-Para agregar la nueva estrategia `MeshLoraCanalAdapter` (demostrado en `tests/test_patrones.py`), se realizaron exactamente dos acciones:
-1. **Crear una clase nueva que implementa la interfaz:**
-   ```python
-   class MeshLoraCanalAdapter(ICanalDespacho):
-       def despachar(self, reporte_id: str, descripcion: str) -> ResultadoDespacho:
-           # Lógica específica de transmisión por radio LoRa
-           return ResultadoDespacho(exitoso=True, canal_usado="MESH_LORA")
-   ```
-2. **Registrar la nueva variante en la factoría en tiempo de ejecución:**
-   ```python
-   fabrica.registrar("MESH_LORA", lambda: MeshLoraCanalAdapter())
-   ```
-**¿Qué se modificó en `ServicioSincronizacion`?**  
-**Absolutamente nada (0 líneas de código modificadas).** El servicio sigue invocando `canal = self.fabrica.crear(canal_nombre)` y `canal.despachar(...)`. El sistema se extendió sin abrir a modificación la lógica de orquestación de emergencias.
+- **Escenario con Mayor Prioridad en SismoReporta AQP:**
+  El escenario con mayor prioridad es **QA-01 (H, H) — Ingesta Masiva durante el Simulacro Nacional**:
+  > *"Cuando 20 000 ciudadanos emiten reportes de incidentes en el lapso de 1 hora bajo una red móvil congestionada en la provincia de Arequipa (tasa pico de 28 req/s), el sistema procesa las solicitudes respondiendo con p95 \le 1.5 s, sin saturar sockets ni disparar timeouts 504."*
+  
+- **Justificación:**
+  1. *Importancia de Negocio (H):* Es el propósito fundamental y de supervivencia de la plataforma. Si durante los primeros 60 minutos de una crisis telúrica el sistema colapsa por denegación de servicio, los ciudadanos perderán la confianza, los datos de personas atrapadas no llegarán a Defensa Civil y la plataforma resultará inútil para salvar vidas.
+  2. *Dificultad Técnica (H):* Exige absorber picos de concurrencia extremos dentro de la restricción severa de hardware de un único VPS modesto (2 vCPUs y 4 GB de RAM), impidiendo el procesamiento síncrono tradicional de geolocalización PostGIS e imágenes en el hilo HTTP.
 
 ---
 
-### Pregunta 3: ¿En qué se diferencian Adapter y Decorator si ambos "envuelven" un objeto?
+### Pregunta 3: ¿Qué diferencia hay entre una táctica y un patrón? Ilustre con el circuit breaker.
 
 **Respuesta:**  
-Aunque ambos patrones estructurales utilizan la técnica de composición mediante un objeto envoltorio (*wrapper*), difieren radicalmente en su **intención arquitectónica y en la compatibilidad de sus interfaces**:
+La diferencia esencial entre táctica y patrón se define en función de su **naturaleza, nivel de abstracción y alcance de diseño**:
 
-| Criterio | Patrón Adapter (GoF) | Patrón Decorator (GoF) |
-| :--- | :--- | :--- |
-| **Intención principal** | **Convertir una interfaz ajena e incompatible** en la que el cliente espera, permitiendo que clases dispares colaboren. | **Agregar responsabilidades o comportamientos transversales** dinámicamente a un objeto sin alterar su interfaz. |
-| **Relación con la interfaz envuelta** | El Adapter implementa la interfaz esperada por el cliente (`ICanalDespacho`), pero el objeto envuelto (*Adaptee*, ej. `RabbitMQSDK`) tiene una **interfaz completamente diferente** (`basic_publish()`). | El Decorator implementa **exactamente la misma interfaz** que el objeto que envuelve (`ICanalDespacho` envuelve a otro `ICanalDespacho`). |
-| **Transparencia para el cliente** | El cliente sabe que invoca la interfaz de destino, pero ignora los métodos nativos del SDK de terceros. | Es 100% transparente y recursivo: un decorador puede envolver a otro decorador y al cliente le resulta indistinguible. |
-| **Ejemplo en SismoReporta AQP** | `RabbitMQCanalAdapter` envuelve a `RabbitMQSDK` convirtiendo llamadas `despachar()` a `basic_publish(..., body_bytes)`. | `ConReintentos` envuelve a cualquier `ICanalDespacho` para añadir captura de `TimeoutError` sin cambiar la firma `despachar()`. |
-| **En el componente de IA** | `ClienteLLMAdapter` convierte `generate_text() -> dict` a `completar() -> str`. | `ConCacheLLM` envuelve a `ProveedorLLM` añadiendo almacenamiento en memoria de respuestas a prompts repetidos. |
+- **Táctica Arquitectónica (Bass, Clements y Kazman, 2021):**
+  Es una **decisión de diseño elemental** enfocada en controlar la respuesta de un único atributo de calidad específico (rendimiento, disponibilidad, seguridad, modificabilidad). Una táctica describe *qué principio fundamental se aplica*, sin prescribir cómo se implementa en clases u objetos de código fuente.
+  - *En Disponibilidad:* La táctica es **"Prevenir la propagación de fallas / Falla Rápida (Fail-Fast)"** y **"Degradación elegante"**, evitando sobrecargar un recurso dependiente que no está respondiendo.
+  
+- **Patrón de Software (GoF / POSA / Nygard):**
+  Es una **solución estructural empaquetada y reusable** a un problema recurrente dentro de un contexto dado, que describe un conjunto coordinado de componentes, responsabilidades y colaboraciones entre clases u objetos. Un patrón suele materializar o combinar una o varias tácticas arquitectónicas.
+
+- **Ilustración con el Circuit Breaker:**
+  - *Como Táctica:* Consiste en cortar inmediatamente el flujo de peticiones hacia un servicio no disponible tras superar un umbral de fallas consecutivas, liberando hilos de ejecución y permitiendo que el sistema dependiente se recupere.
+  - *Como Patrón (Nygard, 2018):* Se implementa mediante una máquina de estados finita explícita con tres estados (`CERRADO`, `ABIERTO`, `SEMIABIERTO`), contadores de fallas temporizados, mecanismos de sondeo (*canary requests*) y la aplicación del patrón estructural **Decorator** (como en `ConCircuitBreaker` en Python), encapsulando la interfaz del servicio sin modificar a los consumidores.
 
 ---
 
-### Pregunta 4: ¿Por qué el patrón State es la implementación natural de un diagrama de máquina de estados? ¿Qué ganó frente a usar condicionales?
+### Pregunta 4: Describa un punto de sensibilidad y un punto de trade-off de su arquitectura, con la evidencia que los respalda.
 
 **Respuesta:**  
-El patrón State es la traducción formal 1 a 1 de una máquina de estados finitos (FSM) a la programación orientada a objetos:
-- Cada estado del diagrama (`BORRADOR`, `ENCOLADO`, `RECIBIDO`, `VERIFICADO`, `ATENDIDO`, `DESCARTADO` en `estados-reporte.mmd`) se materializa como una **clase concreta independiente** que hereda de una clase base común (`EstadoReporteState`).
-- Cada flecha o evento de transición del diagrama se modela como un **método formal** (`encolar_offline()`, `sincronizar()`, `verificar_triaje()`, `atender_incidente()`, `descartar()`).
 
-**Ganancias determinantes frente al uso de condicionales procedimentales:**
-1. **Transiciones ilegales imposibles por construcción:** La clase base prohíbe todas las transiciones por defecto elevando `ValueError`. Cada subclase de estado redefine únicamente las transiciones válidas según el diagrama. Intentar sincronizar un reporte `ATENDIDO` o `DESCARTADO` falla automáticamente sin requerir bloques `if/elif` defensivos.
-2. **Eliminación del olor "Primitive Obsession":** El estado deja de ser un `string` mutable y propenso a errores tipográficos (`"RECIBIDO"`, `"recibido"`, `"RECIVIDO"`) para convertirse en un objeto con identidad y reglas formales.
-3. **Principio de Responsabilidad Única (SRP):** La lógica de validación de un estado específico (ej. verificar que un reporte en borrador posea descripción antes de encolar) reside en `BorradorState`, no dispersa en el servicio.
-4. **Aciclicidad y claridad:** Si en el futuro se añade un nuevo estado (ej. `EN_VERIFICACION_RADIAL`), basta agregar una nueva subclase sin tocar ni arriesgar el funcionamiento de los 5 estados restantes.
+1. **Punto de Sensibilidad (S1 — Tiempo de Encolamiento en Redis):**
+   - *Descripción:* La latencia global de respuesta $p95$ ante el simulacro nacional es críticamente sensible al tiempo de persistencia en memoria del payload en Redis mediante `LPUSH` y a la ausencia de operaciones I/O bloqueantes en el hilo de FastAPI. Si en el endpoint de recepción se introduce inadvertidamente una validación espacial relacional en disco (`ST_Within`) o una llamada de red síncrona a un servicio externo, la latencia se degrada de $16.4\text{ ms}$ a más de $1800\text{ ms}$, violando el presupuesto de QA-01.
+   - *Evidencia Cuantitativa:* En `fitness/rendimiento.py`, la simulación M/G/c demostró que la función síncrona sin buffer a 28 req/s satura la cola ($\rho = 1.68$) con $p95 = 213.8\text{ s}$, mientras que el buffer Redis con respuesta asíncrona pura opera a $\rho = 0.07$ logrando $p95 = 16.4\text{ ms}$.
+
+2. **Punto de Trade-off (T1 — Rendimiento de Ingesta vs. Consistencia Inmediata):**
+   - *Descripción:* Al aplicar la táctica de *Buffer Asíncrono con Fast ACK HTTP 202*, se optimiza drásticamente el Rendimiento ($p95 \le 16.4\text{ ms}$), pero se penaliza la Consistencia Inmediata (Eventual Consistency). El reporte no se encuentra inmediatamente indexado en la base de datos geográfica de PostGIS, sino que existe una ventana temporal de inconsistencia de 1 a 3 segundos mientras Celery consume la cola y genera los índices de calor.
+   - *Evidencia:* Se midió el tiempo medio de espera en la cola Celery ($W_q \approx 2.1\text{ s}$) a máxima carga de 28 req/s. Se concluyó que este trade-off es plenamente favorable, ya que en una emergencia sísmica es infinitamente preferible tener consistencia eventual de 2 segundos que perder reportes por timeouts HTTP 504.
 
 ---
 
-### Pregunta 5: ¿Por qué son indispensables las pruebas de caracterización antes de refactorizar? Describa un error que sus pruebas detectaron.
+### Pregunta 5: ¿Qué supuestos hizo su simulación y cómo podrían invalidar la decisión si fueran falsos?
 
 **Respuesta:**  
-Según Michael Feathers (*Working Effectively with Legacy Code*), el código sin pruebas es código heredado peligroso de modificar. Las pruebas de caracterización son indispensables porque actúan como una **red de seguridad inmutable**:
-- Capturan y congelan el comportamiento observable actual del sistema (tanto casos de éxito como errores y reglas de borde) antes de alterar una sola línea de código.
-- Al ejecutarse con el fixture parametrizado (`@pytest.fixture(params=["sismoreporta.antes.servicio", "sismoreporta.servicio"])`), proporcionan una garantía matemática de que el refactor preservó intacto el comportamiento preexistente sin introducir regresiones silenciosas.
+En las simulaciones ejecutadas en `fitness/rendimiento.py` y `fitness/disponibilidad.py` se asumieron tres supuestos técnicos clave:
 
-**Error real detectado por las pruebas durante el laboratorio:**
-Durante la implementación del Decorator `ConReintentos`, la primera versión generada con asistencia de IA capturaba de forma genérica cualquier fallo con `except Exception:`.
-- **Falla detectada:** La prueba `test_canal_no_soportado_lanza_error` esperaba que si se ingresaba un canal inválido, el sistema arrojara inmediatamente `ValueError`. Sin embargo, `ConReintentos` interceptaba el error y reintentaba 3 veces antes de fallar. En producción, esto causaría reintentos inútiles ante errores no recuperables (cargas malformadas o falta de permisos).
-- **Corrección:** Guiados por la falla de la prueba, se restringió la captura exclusivamente a `except TimeoutError:`. Las fallas transitorias de red se reintentan; los errores de validación de negocio fallan de inmediato como corresponde.
+1. **Llegadas con Proceso de Poisson (Distribución Exponencial entre arribos):**
+   - *Supuesto:* Los 20 000 reportes en 1 hora arriban de forma aleatoria independiente siguiendo un proceso de Poisson con tasa media $\lambda = 5.56\text{ req/s}$ y ráfagas pico estacionarias de $\lambda = 28\text{ req/s}$.
+   - *Cómo invalidaría la decisión:* Si tras el terremoto real se produce un arribo sincronizado masivo de tipo impulso Dirac (por ejemplo, 10 000 peticiones en exactamente 2 segundos provocadas por una alerta pública en televisión), el buffer Redis absorbería los sockets pero la cola en memoria podría saturar la capacidad de consumo de los 4 workers de Celery, incrementando el retraso de visualización en el mapa a más de 5 minutos.
+2. **Independencia en los Tiempos de Servicio (Distribución Lognormal Calibrada):**
+   - *Supuesto:* Cada petición de FastAPI requiere en promedio 2.5 ms ($\sigma = 0.3$) para serializar y encolar en Redis, asumiendo ancho de banda de bus interno local (`localhost`/socket Unix).
+   - *Cómo invalidaría la decisión:* Si Redis estuviera alojado en un nodo remoto sobre red WAN con alta fluctuación de latencia de red ($> 50\text{ ms}$), el hilo de FastAPI esperaría por el ACK de red, invalidando la respuesta inmediata y requiriendo un buffer local en la memoria del propio proceso Gunicorn.
+3. **Persistencia Permanente en Almacenamiento IndexedDB del Cliente:**
+   - *Supuesto:* Se asumió que los smartphones de los ciudadanos no son reiniciados de fábrica ni el usuario limpia compulsivamente el almacenamiento de su navegador PWA durante los 20 minutos de corte de señal.
+   - *Cómo invalidaría la decisión:* Si el sistema operativo móvil (ej. iOS en modo de bajo almacenamiento) purga la caché de IndexedDB para liberar espacio antes de que el Circuit Breaker cierre y sincronice, los reportes locales se perderían antes del drenado.
 
 ---
 
-### Pregunta 6: ¿Qué patrón propuso la IA que ustedes rechazaron y por qué? ¿Qué es la "patternitis"?
+### Pregunta 6: ¿Qué riesgo de la evaluación cruzada aceptaron sin mitigarlo y por qué es razonable para un plazo de 1 mes?
 
 **Respuesta:**  
-**Patrones propuestos por la IA y rechazados por el equipo:**
-1. **`Singleton` para `FabricaCanales`:**
-   - *Propuesta de la IA:* Implementar la factoría como una instancia global única accesible mediante `FabricaCanales.get_instance()` para "ahorrar memoria y centralizar el registro".
-   - *Por qué se rechazó:* El patrón Singleton introduce acoplamiento global encubierto, dificulta las pruebas concurrentes y bloquea la inyección de canales simulados (`MeshLoraCanalAdapter`) en entornos de prueba aislados. Se sustituyó por inyección de dependencias explícita en el constructor.
-2. **`Abstract Factory` para familias de canales y notificadores:**
-   - *Por qué se rechazó:* No existen familias cohesivas interdependientes de productos en SismoReporta AQP. Forzar interfaces abstractas paralelas para crear simultáneamente transporte y notificaciones era sobreingeniería estéril.
 
-**¿Qué es la "Patternitis"?**  
-La *Patternitis* (o sobreingeniería por patrones) es un antipatrón cognitivo y de diseño donde los desarrolladores o los modelos de lenguaje intentan forzar la mayor cantidad posible de patrones de diseño GoF en una base de código, sin que exista un olor de código concreto que lo demande ni una justificación de mantenibilidad.  
-Como consecuencia, el sistema sufre de **indirección excesiva, proliferación inmanejable de interfaces, dificultad de rastreo en debugging y pérdida de legibilidad**. Como regla de oro aprendida en la práctica: *Un patrón solo debe introducirse cuando un olor medible lo exige y las pruebas confirman su beneficio neto.*
+- **Riesgo Aceptado:**
+  **Riesgo R2 — Punto Único de Falla (SPOF) en la Instancia Única de PostgreSQL / VPS (Severidad: 12 - Probabilidad: 3, Impacto: 4).**
+  La evaluación ATAM-lite formuló la pregunta incómoda: *"Si el servidor VPS físico en la nube sufre un corte eléctrico catastrófico durante el terremoto, ¿cómo garantizan un MTTR < 15 min sin un clúster de alta disponibilidad multi-región?"*
+
+- **Justificación de por qué es razonable aceptarlo para el plazo de 1 mes:**
+  1. *Restricción de Recursos y Plazo (R-01, R-02, R-03):* Configurar un clúster PostgreSQL de alta disponibilidad con replicación síncrona multizona (Patroni + etcd + PgBouncer) requiere al menos 3 instancias independientes (\$60-\$120 USD/mes), violando directamente la restricción presupuestaria de \$15 USD/mes (R-03).
+  2. *Curva de Complejidad Operativa:* Para un equipo de 2 desarrolladores en un plazo de 1 mes, depurar particiones de red (*split-brain*) y pruebas de conmutación en clústeres distribuidos consumiría más del 60% del tiempo del proyecto, sacrificando las funcionalidades vitales de triaje y la PWA ciudadana.
+  3. *Mitigación Compensatoria Aceptada:* Se mitigó el impacto mediante una estrategia pragmática: **PWA Offline-First** (los reportes siguen acumulándose en los celulares de los usuarios aunque el servidor esté caído), snapshots horarios automatizados del volumen SSD a nivel de hipervisor, y un script de recuperación automatizada mediante Docker Compose con $\text{MTTR} \le 15\text{ minutos}$ documentado en el plan de contingencia.
 
 ---
 
-### Pregunta 7: ¿Por qué se debe tratar la salida de un LLM como dato no confiable? Describa los guardrails de su caso y qué protegen.
+### Pregunta 7: Explique qué es una fitness function y qué degradación concreta de su arquitectura detectaría cada una de las suyas.
 
 **Respuesta:**  
-La salida de un Modelo de Lenguaje (LLM) es intrínsecamente **probabilística y no determinista**: ante prompts idénticos puede generar respuestas disímiles, no tiene comprensión física del mundo y padece de alucinaciones (afirmaciones falsas emitidas con alta confianza lingüística). En una catástrofe sísmica en Arequipa, tratar la respuesta de un LLM como un dato confiable en el flujo transaccional puede costar vidas humanas.
+Una **Fitness Function Arquitectural** (Ford, Parsons, Kua y Sadalage, 2022) es una prueba automatizada, objetiva e integrada en el pipeline de Integración Continua (CI) que evalúa si la arquitectura de software preserva sus características deseadas y no se degrada con el tiempo ante cambios en el código fuente.
 
-**Guardrails implementados con Chain of Responsibility (`ia.py`):**
-1. **`SinAlucinacionMagnitud`:**
-   - *Qué protege:* Prohíbe que el LLM invente grados o escalas sísmicas (ej. *"Sismo de magnitud 8.5 Mw"* o *"Escala Richter 7.9"*) basándose únicamente en la descripción de un ciudadano común.  
-   - *Justificación de dominio:* Únicamente el Instituto Geofísico del Perú (IGP) y el Centro Sismológico Nacional poseen acelerógrafos calibrados para certificar magnitudes oficiales. Si la IA inventa una magnitud errónea, puede generar pánico infundado o inducir al COE a desestimar réplicas reales.
-2. **`SinPanicoSocial`:**
-   - *Qué protege:* Censa y bloquea frases alarmistas o de inducción al caos (ej. *"Evacúen Arequipa de inmediato"*, *"Saqueos inminentes"*, *"Tsunami en la ciudad"*).
-   - *Justificación de dominio:* Las instrucciones de evacuación zonal corresponden con exclusividad a las autoridades de Defensa Civil. Un mensaje alarmista propagado a través del mapa de calor provocaría estampidas humanas y congestión de vías de auxilio.
-3. **`FormatoSeveridadValido`:**
-   - *Qué protege:* Garantiza que la clasificación contenga de forma estricta una de las 4 categorías del catálogo oficial de incidentes: `LEVE`, `MODERADA`, `GRAVE` o `CATASTROFICA`.
-   - *Justificación de dominio:* Evita que respuestas ambiguas o poéticas del LLM rompan la máquina de estados o impidan priorizar el incidente en el algoritmo de triaje geoespacial.
+En SismoReporta AQP, cada fitness function protege el sistema contra una degradación concreta:
+
+1. **FF-01 (Estructural — Capas sin ciclos en el monolito modular, ADR-001):**
+   - *Herramienta:* `import-linter` (tipo: `layers`).
+   - *Degradación que detecta:* Si un programador añade un atajo temporal importando el servicio de aplicación desde los estados o entidades de dominio (`sismoreporta.estados -> sismoreporta.servicio`), la prueba falla inmediatamente en CI, impidiendo la formación de grafos acoplados y dependencias circulares que convierten el monolito en una "gran bola de lodo".
+2. **FF-02 (Estructural — Aislamiento de adaptadores externos, ADR-005):**
+   - *Herramienta:* `import-linter` (tipo: `forbidden`).
+   - *Degradación que detecta:* Si una entidad nuclear del dominio o un comando importa directamente SDKs externos o drivers concretos (`sismoreporta.externos`, como Redis, RabbitMQ o Twilio), la prueba bloquea el Pull Request, garantizando que el dominio solo conozca abstracciones (Puertos).
+3. **FF-03 (Calidad — Presupuesto de Rendimiento en Simulacro, QA-01):**
+   - *Herramienta:* `pytest` sobre `fitness.rendimiento.simular`.
+   - *Degradación que detecta:* Si alguien modifica el endpoint de ingesta eliminando el Fast ACK HTTP 202 o reintroduciendo tareas síncronas pesadas, el cálculo de $p95$ a 28 req/s superará los $1500\text{ ms}$, disparando un aserto que rompe el build.
+4. **FF-04 (Calidad — Integridad y Cero Pérdida de Reportes, QA-02):**
+   - *Herramienta:* `pytest` sobre `fitness.disponibilidad.simular`.
+   - *Degradación que detecta:* Si se desactiva el drenado del Outbox persistente o se altera la lógica de almacenamiento local, el número de reportes perdidos tras una interrupción superará $0$, bloqueando la integración.
+5. **FF-05 (Calidad — Protección contra Thundering Herd, Mitigación R3):**
+   - *Herramienta:* `pytest` comparativo (`simular("breaker")` vs `simular("reintentos")`).
+   - *Degradación que detecta:* Si un desarrollador reduce el enfriamiento del Circuit Breaker o implementa reintentos inmediatos sin Jitter, el número de llamadas durante una caída se disparará por encima de la quinta parte de la línea base, fallando la aserción.
+6. **FF-06 (Calidad — Aislamiento Multidistrital RLS, QA-04 / Mitigación R4):**
+   - *Herramienta:* `pytest` con consulta parametrizada multi-tenant.
+   - *Degradación que detecta:* Si una migración de base de datos desactiva la directiva `ENABLE ROW LEVEL SECURITY` o introduce una cláusula SQL que permite a un usuario de *Yanahuara* leer filas de *Cerro Colorado*, la prueba detecta la filtración y bloquea el despliegue.
 
 ---
 
-### Pregunta 8: Según sus métricas, ¿valió la pena el refactor? Argumente con la complejidad ciclomática, las líneas de código y los cambios previstos.
+### Pregunta 8: ¿Qué propuesta de la IA rechazaron con evidencia? ¿Qué habría pasado si la aceptaban sin medir?
 
 **Respuesta:**  
-**Sí, valió absolutamente la pena desde una perspectiva de ingeniería de software para sistemas de misión crítica.** El análisis se sustenta en tres dimensiones cuantificables:
 
-1. **Complejidad Ciclomática (Reducción del 86.4%):**
-   - El método crítico `sincronizar_reporte()` pasó de una **complejidad 22 (Rango D - difícil de testear y propenso a bugs)** a una **complejidad 3 (Rango A - simple, lineal y testeable)**.
-   - El promedio de complejidad de la clase bajó de **6.71 (B) a 1.93 (A)**. Esto reduce drásticamente el número de caminos independientes necesarios para lograr 100% de cobertura de ramas en pruebas unitarias.
+- **Propuesta de la IA Rechazada:**
+  Durante la Iteración 1 de ADD (Prompt IA 2) y la posterior crítica adversarial de ATAM-lite (Riesgo R5), la IA sostuvo insistentemente que:
+  > *"Un monolito en Python con Celery colapsará inevitablemente bajo 20 000 peticiones en 1 hora debido al Global Interpreter Lock (GIL) y la sobrecarga del event loop. Para el simulacro nacional es mandatorio rediseñar la arquitectura hacia microservicios distribuidos desarrollados en Go o Rust, orquestados sobre un clúster Kubernetes (EKS/GKE) con Apache Kafka."*
 
-2. **Líneas de Código y Granularidad (El costo asumido):**
-   - El código de la lógica orquestadora pasó de 106 SLOC en 1 solo archivo procedural a 480 SLOC distribuidos en 6 módulos especializados (`servicio.py`, `canales.py`, `estados.py`, `eventos.py`, `comandos.py`, `ia.py`).
-   - Aunque el volumen total creció en un 352%, la cohesión de cada archivo es máxima (Single Responsibility Principle) y el índice de mantenibilidad (MI) aumentó de 52.93 a 58.73.
+- **Evidencia Cuantitativa que la Refutó:**
+  El equipo realizó el cálculo matemático dimensional y ejecutó la simulación de colas en `fitness/rendimiento.py`:
+  1. *Carga Real:* 20 000 reportes en 1 hora equivalen a una tasa promedio de **$5.56\text{ reportes/segundo}$**, con picos estocásticos de **$28\text{ req/s}$**.
+  2. *Capacidad Medida:* Un único proceso Celery en Python ejecutando queries espaciales simples en PostgreSQL procesa entre 80 y 150 operaciones por segundo. Con 4 workers Celery independientes (procesos de SO separados que no comparten GIL), la capacidad de procesamiento del backend supera los **$400\text{ reportes/segundo}$**, lo que representa un margen de holgura de más del **$1400\%$** frente al pico del simulacro.
+  3. *Utilización:* La simulación demostró que con el buffer en Redis y Fast ACK, la latencia es de $p95 = 16.4\text{ ms}$ con una utilización de buffer de tan solo $\rho = 0.07$ (7% de carga).
 
-3. **Justificación por los Cambios Previstos en SismoReporta AQP:**
-   - Si la plataforma fuera un software estático que solo despachara por Redis y nunca integrara nuevos medios de comunicación, la versión inicial de 106 líneas habría sido suficiente.
-   - Sin embargo, en un escenario real de catástrofe en Arequipa donde las antenas 4G colapsan, el sistema **requiere conmutar dinámicamente entre Redis, RabbitMQ, Gateway Satelital y radio Mesh LoRa**. Gracias a Strategy + Factory, agregar LoRa demandó 0 cambios en el servicio central.
-   - Asimismo, aislar el LLM detrás de caché (`ConCacheLLM`) reduce la latencia en un 95% para descripciones recurrentes y los guardrails aseguran que ninguna alucinación comprometa la coordinación de brigadas.
+- **¿Qué habría pasado si la aceptaban sin medir?**
+  1. **Quiebre del Presupuesto (R-03):** El clúster Kubernetes administrado con Kafka de 3 nodos habría incrementado el costo mensual de \$15 USD a más de \$180 USD/mes, haciendo inviable el proyecto para el presupuesto asignado.
+  2. **Fracaso en la Entrega (R-01):** Reimplementar el sistema en Go/Rust y configurar mallas de servicio, observabilidad distribuida y manifiestos de Kubernetes con un equipo de solo 2 desarrolladores habría demandado al menos 4 meses de trabajo, incumpliendo el plazo fatal de 1 mes para el simulacro.
+  3. **Vulnerabilidad a Errores Operativos:** La sobrecomplejidad arquitectónica no justificada (*accidental complexity*) habría multiplicado los puntos de falla en producción durante el evento sísmico.

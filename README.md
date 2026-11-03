@@ -347,49 +347,108 @@ En este laboratorio se refactoriza de forma segura el flujo crítico de *"Envío
 
 ---
 
+## Diseño de la Arquitectura (Lab 08)
+
+En este laboratorio se profundiza el diseño arquitectónico de **SismoReporta AQP** guiado por atributos de calidad mediante el método **Attribute-Driven Design (ADD 3.0)**, la priorización estricta a través de un **Árbol de Utilidad**, la evaluación de riesgos con **ATAM-lite** y la protección continua de la arquitectura mediante **Fitness Functions** automatizadas en Integración Continua (CI).
+
+### 1. Árbol de Utilidad y Escenarios de Calidad
+
+El árbol de utilidad estructura los atributos de calidad a partir del escenario de crecimiento del caso (**Simulacro Nacional: 20 000 reportes en 1 hora con red móvil congestionada**).
+
+![Árbol de Utilidad](docs/architecture/utilidad/arbol.png)
+
+| ID | Atributo | Categoría / Táctica | Escenario de Calidad (Estímulo, Respuesta y Medida Numérica) | Importancia / Dificultad |
+| :---: | :--- | :--- | :--- | :---: |
+| **QA-01** | Rendimiento | Ingesta de Ráfagas | 20 000 ciudadanos emiten reportes en 1 hora durante el simulacro nacional bajo red 4G/3G congestionada (28 req/s pico); el sistema responde con Fast ACK con **$p95 \le 1.5\text{ s}$**. | **(H, H)** |
+| **QA-02** | Disponibilidad | Resiliencia de Red | La red móvil presenta 8% de timeouts transitorios y el broker central sufre una caída de 20 min; el cliente retiene los datos y los sincroniza al volver el canal con **0 reportes perdidos**. | **(H, H)** |
+| **QA-03** | Disponibilidad | Resiliencia de Servidor | El nodo VPS central sufre caída súbita o fallo del hipervisor; el sistema se reanuda desde snapshots automáticos con **$\text{MTTR} \le 15\text{ min}$**. | **(H, M)** |
+| **QA-04** | Seguridad | Aislamiento Multidistrital | Un operador distrital consulta la API; el sistema aplica Row-Level Security (RLS) en PostgreSQL, garantizando **100% de aislamiento** distrital (0 filas expuestas a otras jurisdicciones). | **(H, M)** |
+| **QA-05** | Modificabilidad | Nuevos Proveedores | Integrar un nuevo proveedor de mapas satelitales (IGN/Mapbox) o sensor acelerométrico (IGP) mediante puertos desacoplados con un esfuerzo **$\le 16\text{ horas-persona}$**. | **(M, M)** |
+| **QA-06** | Rendimiento | Consultas Geoespaciales | Coordinadores del COE consultan el mapa de calor de intensidad Mercalli con 50 000 registros históricos; índice PostGIS GiST responde con **$p95 \le 500\text{ ms}$**. | **(M, L)** |
+| **QA-07** | Seguridad | Mitigación de Spam/DDoS | Ataque o reportes falsos automatizados intentan inundar el gateway; NGINX aplica rate limiting conteniendo peticiones anómalas a **$< 50\text{ req/s}$ por IP**. | **(M, M)** |
+| **QA-08** | Modificabilidad | Interoperabilidad INDECI | Exportar datos consolidados en formato GeoJSON/CAP estándar para el SINAGERD; esfuerzo de desarrollo **$\le 8\text{ horas-persona}$**. | **(L, L)** |
+
+*Corrección Crítica a la IA:* La IA calificó inicialmente QA-06 como (H, H); el equipo la corrigió a (M, L) porque la consulta del mapa de calor no es el canal crítico de ingesta ciudadana de vida o muerte y su resolución mediante índices espaciales GiST es estándar en PostGIS.
+
+---
+
+### 2. Resumen de las Iteraciones de ADD 3.0
+
+| Iteración | Escenario Objetivo | Elemento Refinado | Conceptos Evaluados | Táctica / Decisión Adoptada | Evidencia Cuantitativa |
+| :---: | :---: | :--- | :--- | :--- | :--- |
+| **Iteración 1** | **QA-01**<br/>(H, H)<br/>*Rendimiento* | Controlador REST de FastAPI y Capa de Ingesta | 1. Síncrono a 8 workers<br/>2. Kubernetes + Kafka (IA)<br/>**3. Buffer Redis + Fast ACK** | **Buffer Asíncrono en Redis (`LPUSH`) con Fast ACK HTTP 202.** Tareas pesadas diferidas a Celery + PostGIS GiST. (ADR-006). | Simulación M/G/c (`fitness/rendimiento.py`): a 28 req/s pico, **$p95 = 16.4\text{ ms}$** ($\rho = 0.07$), frente a $213.8\text{ s}$ sin buffer. |
+| **Iteración 2** | **QA-02**<br/>(H, H)<br/>*Disponibilidad* | Cliente PWA y Broker de Despacho | 1. Sin tácticas<br/>2. Reintentos agresivos<br/>**3. Circuit Breaker + Outbox** | **Client-side Circuit Breaker (Decorator) + Local Outbox (IndexedDB) y Server Outbox (PostgreSQL ACID)** con Jitter aleatorio. (ADR-007). | Simulación Monte Carlo (`fitness/disponibilidad.py`): **0 reportes perdidos (100% éxito)** y llamadas inútiles al broker caído reducidas de 450 a 12 (**-97.3%**). |
+| **Iteración 3** | **QA-04 / QA-05**<br/>(H, M / M, M)<br/>*Seguridad / Modif.* | Esquema de Persistencia y Puertos de Dominio | 1. 29 bases de datos (IA)<br/>2. 29 esquemas lógicos<br/>**3. Columna + PostgreSQL RLS** | **PostgreSQL Row-Level Security (RLS) con claims JWT** para aislamiento distrital y **Arquitectura Hexagonal** para puertos de mapas/sensores. (ADR-008). | Evaluación multicriterio (4.85/5.0); consumo de RAM en VPS $< 150\text{ MB}$; alta de distritos en $< 1\text{ s}$; verificación con FF-06. |
+
+---
+
+### 3. Matriz de Riesgos ATAM-lite y Mitigaciones
+
+![Matriz de Riesgos ATAM-lite](docs/architecture/diagramas/img/riesgos.png)
+
+* **Riesgo R3 (Crítico - Sev 16):** *Tormenta de reintentos (Thundering Herd)* cuando 15 000 celulares reconectan simultáneamente tras el corte.  
+  *Mitigación:* Circuit Breaker local conmuta a `ABIERTO` (*fail-fast*) + algoritmo de *Exponential Backoff con Jitter aleatorio* (5 a 60 s) + rate limiting en NGINX.
+* **Riesgo R2 (Crítico - Sev 12):** *SPOF en instancia única de PostgreSQL / VPS*.  
+  *Mitigación:* PWA Offline-First (los reportes se resguardan en IndexedDB de los celulares) + snapshots horarios automatizados en almacenamiento en bloque con $\text{MTTR} \le 15\text{ min}$.
+* **Riesgo R1 (Atención - Sev 10):** *Desborde de RAM en Redis si Celery se cae*.  
+  *Mitigación:* `maxmemory 512mb` con política `noeviction` y persistencia AOF en SSD (20 000 reportes insumen solo ~10 MB).
+* **Riesgo R4 (Atención - Sev 8):** *Fuga de reportes confidenciales entre distritos por error en query*.  
+  *Mitigación:* Política PostgreSQL RLS impuesta en el kernel relacional + fitness function FF-06 en CI.
+* **Riesgo R5 (Falso Positivo Refutado - Sev 2):** *La IA afirmó que Celery y Python no escalan para 20 000 reportes en 1 hora*.  
+  *Refutación con evidencia:* 20 000 reportes/h representan solo 5.56 req/s promedio (28 req/s pico). Con 4 workers Celery la capacidad del backend es de $> 400\text{ req/s}$ ($< 15\%$ CPU).
+
+---
+
+### 4. Fitness Functions Automatizadas en CI
+
+Las fitness functions operan como compuerta de calidad obligatoria en GitHub Actions (`.github/workflows/fitness.yml`):
+
+| ID | Tipo | Regla Arquitectural Protegida | Herramienta | Comando de Verificación |
+| :---: | :---: | :--- | :---: | :--- |
+| **FF-01** | Estructural | Capas del monolito modular sin ciclos de dependencias (ADR-001) | `import-linter` | `PYTHONPATH=src lint-imports` |
+| **FF-02** | Estructural | Dominio y estados aislados de adaptadores y SDKs externos (ADR-005) | `import-linter` | `PYTHONPATH=src lint-imports` |
+| **FF-03** | Calidad | Presupuesto de latencia en simulacro nacional: $p95 \le 1500\text{ ms}$ a 28 req/s (QA-01) | `pytest` | `pytest -v tests/test_fitness.py::test_ff03_rendimiento_simulacro_nacional` |
+| **FF-04** | Calidad | Cero reportes perdidos ante intermitencia móvil y caída del broker (QA-02) | `pytest` | `pytest -v tests/test_fitness.py::test_ff04_cero_reportes_perdidos_ante_caida_del_broker` |
+| **FF-05** | Calidad | Circuit Breaker reduce llamadas inútiles al broker caído en $> 80\%$ (Mitigación R3) | `pytest` | `pytest -v tests/test_fitness.py::test_ff05_breaker_protege_al_broker_caido` |
+| **FF-06** | Calidad | Aislamiento estricto de reportes entre distritos mediante RLS (QA-04 / Mitigación R4) | `pytest` | `pytest -v tests/test_fitness.py::test_ff06_aislamiento_rls_distrital` |
+
+---
+
 ## Cómo Reproducir el Proyecto
 
 ### 1. Requisitos del Entorno
-* Python 3.10+
-* OpenJDK 17+ (Java 25 probado)
-* Pytest y Radon (`pip install pytest radon`)
-* Structurizr CLI (`structurizr.sh`) o imagen Docker `structurizr/cli`
-* PlantUML y Graphviz (`plantuml.jar` o Docker `plantuml/plantuml`)
+* Python 3.10+ (probado en Python 3.11 y 3.14)
+* Paquetes de validación: `pip install pytest import-linter matplotlib numpy cairosvg radon`
+* Docker Engine (para Structurizr CLI y Graphviz/PlantUML)
 * Typst CLI (`typst`)
-* Pylint / Pyreverse (`pip install pylint`)
 
-### 2. Ejecución de Pruebas Automatizadas y Métricas (Lab 07)
+### 2. Verificación de Fitness Functions y Suite de Pruebas (Lab 08)
 ```bash
-# Ejecutar todas las pruebas unitarias y de caracterización (35 passed)
-pytest -v tests/
+# 1. Verificar contratos estructurales de capas (FF-01 y FF-02)
+PYTHONPATH=src lint-imports
 
-# Calcular complejidad ciclomática de los módulos refactorizados
-radon cc -s -a src/sismoreporta/
+# 2. Ejecutar fitness functions arquitecturales de calidad (FF-03 a FF-06)
+PYTHONPATH=src:. pytest -v tests/test_fitness.py
 
-# Medir métricas de volumen y líneas lógicas de código (SLOC)
-radon raw -s src/sismoreporta/antes/servicio.py src/sismoreporta/servicio.py
-
-# Verificar índice de mantenibilidad (MI)
-radon mi -s src/sismoreporta/servicio.py
+# 3. Ejecutar suite completa de pruebas (39 tests: comportamiento, patrones y fitness)
+PYTHONPATH=src:. pytest -v tests/
 ```
 
-### 3. Validación y Exportación de la Arquitectura C4 (Lab 06)
+### 3. Ejecución de Simulaciones Cuantitativas
 ```bash
-# Validar la consistencia semántica del modelo DSL
-structurizr.sh validate -w docs/architecture/c4/workspace.dsl
+# Simulación de teoría de colas M/G/c (Rendimiento QA-01)
+python3 fitness/rendimiento.py
 
-# Exportar el modelo a C4-PlantUML y Mermaid
-structurizr.sh export -w docs/architecture/c4/workspace.dsl -f plantuml/c4plantuml -o docs/architecture/c4/export
-structurizr.sh export -w docs/architecture/c4/workspace.dsl -f mermaid -o docs/architecture/c4/export
+# Simulación estocástica Monte Carlo (Disponibilidad QA-02)
+python3 fitness/disponibilidad.py
+
+# Generación de matriz de riesgos ATAM-lite
+python3 fitness/matriz_riesgos.py
 ```
 
-### 4. Renderizado de Diagramas UML y Patrones
+### 4. Validación del Modelo C4 con Etiquetas [QA-xx]
 ```bash
-# Renderizar diagramas de patrones de diseño (Lab 07)
-java -jar plantuml.jar -Playout=smetana -tpng docs/design/patrones/*.puml -o img/
-
-# Renderizar diagramas de clases generales
-java -jar plantuml.jar -Playout=smetana -tpng docs/design/clases.puml -o img/
+docker run --rm -v "$PWD":/usr/local/structurizr structurizr/cli validate -w docs/architecture/c4/workspace.dsl
 ```
 
 ### 5. Compilación de Informes Formales en Typst
@@ -402,5 +461,9 @@ typst compile informe_lab06.typ informe_lab06.pdf
 
 # Compilar informe del Laboratorio 07
 typst compile informe_lab07.typ informe_lab07.pdf
+
+# Compilar informe del Laboratorio 08
+typst compile informe_lab08.typ informe_lab08.pdf
 ```
+
 
