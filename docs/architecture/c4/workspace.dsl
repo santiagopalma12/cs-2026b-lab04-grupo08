@@ -21,23 +21,23 @@ workspace "SismoReporta AQP" "Modelo de arquitectura C4 para la plataforma de ge
         // =====================================================================
         sismoReporta = softwareSystem "SismoReporta AQP" "Plataforma ciudadana y de coordinación de emergencias post-sismo con soporte de funcionamiento sin conexión y sincronización diferida masiva." {
             
-            pwaCliente = container "PWA Cliente Offline" "Aplicación Web Progresiva para smartphones con persistencia local en IndexedDB y compresión de fotos en el cliente." "TypeScript, React, PWA, IndexedDB" "Web Browser,Mobile App"
-            tableroCoe = container "Tablero Web COE" "Panel de mando web para operadores del COE con visualización cartográfica en tiempo real y consola de asignación de brigadas." "TypeScript, React, Leaflet, WebSockets" "Web Browser"
-            proxyNginx = container "Proxy Perimetral Nginx" "Reverse proxy perimetral con terminación TLS, compresión HTTP y rate limiting para protección contra sobrecarga." "Nginx, Linux" "Web Server"
+            pwaCliente = container "PWA Cliente Offline [QA-02, QA-03]" "Aplicación Web Progresiva para smartphones con persistencia local en IndexedDB y Circuit Breaker [QA-02] con compresión de fotos." "TypeScript, React, PWA, IndexedDB" "Web Browser,Mobile App"
+            tableroCoe = container "Tablero Web COE [QA-04, QA-06]" "Panel de mando web para operadores del COE con visualización cartográfica en tiempo real y filtrado multidistrital [QA-04]." "TypeScript, React, Leaflet, WebSockets" "Web Browser"
+            proxyNginx = container "Proxy Perimetral Nginx [QA-01, QA-07]" "Reverse proxy perimetral con terminación TLS, compresión HTTP y rate limiting para protección contra sobrecarga en simulacro [QA-01]." "Nginx, Linux" "Web Server"
             
-            apiBackend = container "API Backend Monolítico" "Núcleo monolítico modular en Python que procesa endpoints REST, gestiona conexiones WebSocket y orquesta la ingesta rápida." "Python, FastAPI, Pydantic, Uvicorn" "Application" {
-                compIngesta = component "Componente de Ingesta y Sincronización" "Controlador REST y servicio de ingesta que valida geocercas, esquemas sintácticos y emite confirmaciones HTTP 202 inmediatas." "FastAPI, Pydantic"
-                compTriaje = component "Componente de Triaje y Severidad" "Motor analítico de evaluación de gravedad estructural, colapsos y clasificación de criticidad." "Python"
-                compDespacho = component "Componente de Despacho y Brigadas" "Algoritmo de asignación geodésica de brigadas de auxilio según proximidad espacial y disponibilidad." "Python"
-                compGis = component "Componente de Servicios GIS" "Servicio geoespacial para cálculo de distancias geodésicas, clustering y mapa de calor con funciones PostGIS." "Python, GeoAlchemy2"
-                compNotificaciones = component "Componente de Notificaciones" "Emisor de alertas en tiempo real vía WebSockets al COE y despachador de eventos a la pasarela de difusión masiva." "Python, WebSockets"
-                compCompartido = component "Dominio Compartido y Tipos Base" "Entidades nucleares de dominio (Reporte, Coordenadas, FotoEvidencia, Severidad) e interfaces de abstracción." "Python, Pydantic"
+            apiBackend = container "API Backend Monolítico [QA-01, QA-04, QA-05]" "Núcleo monolítico modular en Python que procesa endpoints REST con Fast ACK HTTP 202 [QA-01] y aislamiento RLS [QA-04]." "Python, FastAPI, Pydantic, Uvicorn" "Application" {
+                compIngesta = component "Componente de Ingesta y Sincronización [QA-01, QA-02]" "Controlador REST y servicio de ingesta que valida geocercas, esquemas sintácticos y emite confirmaciones HTTP 202 inmediatas [QA-01]." "FastAPI, Pydantic"
+                compTriaje = component "Componente de Triaje y Severidad [QA-01]" "Motor analítico de evaluación de gravedad estructural, colapsos y clasificación de criticidad." "Python"
+                compDespacho = component "Componente de Despacho y Brigadas [QA-03]" "Algoritmo de asignación geodésica de brigadas de auxilio según proximidad espacial y disponibilidad." "Python"
+                compGis = component "Componente de Servicios GIS [QA-05, QA-06]" "Servicio geoespacial para cálculo de distancias geodésicas, clustering y mapa de calor con funciones PostGIS e índices GiST [QA-06]." "Python, GeoAlchemy2"
+                compNotificaciones = component "Componente de Notificaciones [QA-02]" "Emisor de alertas en tiempo real vía WebSockets al COE y despachador de eventos a la pasarela de difusión masiva." "Python, WebSockets"
+                compCompartido = component "Dominio Compartido y Tipos Base [QA-05]" "Entidades nucleares de dominio (Reporte, Coordenadas, FotoEvidencia, Severidad) e interfaces de abstracción desacopladas [QA-05]." "Python, Pydantic"
             }
 
-            brokerRedis = container "Buffer y Broker de Colas" "Buffer volátil en memoria para absorber picos extremos de ingesta y broker de colas para tareas en background." "Redis 7" "Queue,Database"
-            workerAsincrono = container "Worker de Procesamiento Asíncrono" "Procesos en segundo plano (Celery) que ejecutan compresión de fotos, triaje diferido y deduplicación espacial." "Python, Celery" "Application"
-            bdPostgis = container "Base de Datos Geoespacial" "Motor de base de datos relacional con extensión geoespacial para almacenamiento persistente y consultas espaciales." "PostgreSQL 16, PostGIS" "Database"
-            almacenFotos = container "Almacén de Objetos Multimedia" "Servicio de almacenamiento compatible con S3 para custodia de fotografías de colapsos estructurales optimizadas." "MinIO S3" "Database"
+            brokerRedis = container "Buffer y Broker de Colas [QA-01]" "Buffer volátil en memoria para absorber picos extremos de 20 000 reportes en el simulacro nacional [QA-01] y broker Celery." "Redis 7" "Queue,Database"
+            workerAsincrono = container "Worker de Procesamiento Asíncrono [QA-01, QA-02]" "Procesos en segundo plano (Celery) que ejecutan compresión de fotos, triaje diferido y vaciado garantizado de Outbox [QA-02]." "Python, Celery" "Application"
+            bdPostgis = container "Base de Datos Geoespacial [QA-04, QA-06]" "Motor PostgreSQL 16 con PostGIS, índice GiST para consultas en <500ms [QA-06] y Row-Level Security multidistrital [QA-04]." "PostgreSQL 16, PostGIS" "Database"
+            almacenFotos = container "Almacén de Objetos Multimedia [QA-01]" "Servicio de almacenamiento compatible con S3 para custodia de fotografías de colapsos estructurales optimizadas." "MinIO S3" "Database"
         }
 
         // =====================================================================
