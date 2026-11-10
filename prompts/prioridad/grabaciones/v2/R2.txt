@@ -1,0 +1,9 @@
+{
+  "reporte_id": "R2",
+  "prioridad": "CRITICA",
+  "score_urgencia": 11,
+  "requiere_despacho_inmediato": true,
+  "riesgo_vida_humana": true,
+  "tipo_afectacion": "FUGA_O_INCENDIO",
+  "justificacion": "Fuga mayor de gas con peligro inminente de deflagracion masiva en Cerro Colorado."
+}

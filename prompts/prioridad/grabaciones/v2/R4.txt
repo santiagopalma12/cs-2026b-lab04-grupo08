@@ -1,0 +1,9 @@
+{
+  "reporte_id": "R4",
+  "prioridad": "MEDIA",
+  "score_urgencia": 5,
+  "requiere_despacho_inmediato": false,
+  "riesgo_vida_humana": true,
+  "tipo_afectacion": "VIA_BLOQUEADA",
+  "justificacion": "Desprendimiento de rocas en Variante de Uchumayo con posible peligro para transeuntes."
+}

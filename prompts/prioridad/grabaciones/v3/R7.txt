@@ -1,0 +1,9 @@
+{
+  "reporte_id": "R7",
+  "prioridad": "MEDIA",
+  "score_urgencia": 4,
+  "requiere_despacho_inmediato": false,
+  "riesgo_vida_humana": false,
+  "tipo_afectacion": "VIA_BLOQUEADA",
+  "justificacion": "Anegamiento de via publica por fractura de conducto matriz de agua potable en Cayma sin victimas."
+}

@@ -1,0 +1,9 @@
+{
+  "reporte_id": "R2",
+  "prioridad": "CRITICA",
+  "score_urgencia": 9,
+  "requiere_despacho_inmediato": true,
+  "riesgo_vida_humana": true,
+  "tipo_afectacion": "FUGA_O_INCENDIO",
+  "justificacion": "Fuga de gas licuado de alta concentracion en entorno escolar de Cerro Colorado con riesgo critico de deflagracion."
+}

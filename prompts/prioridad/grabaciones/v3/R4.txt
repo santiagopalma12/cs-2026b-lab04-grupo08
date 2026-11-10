@@ -1,0 +1,9 @@
+{
+  "reporte_id": "R4",
+  "prioridad": "MEDIA",
+  "score_urgencia": 5,
+  "requiere_despacho_inmediato": false,
+  "riesgo_vida_humana": false,
+  "tipo_afectacion": "VIA_BLOQUEADA",
+  "justificacion": "Obstruccion parcial de un carril por deslizamiento de rocas en Variante de Uchumayo con flujo vehicular activo."
+}

@@ -1,0 +1,15 @@
+Eres un operador del Centro de Operaciones de Emergencia (COE) para SismoReporta AQP.
+Evalúa el siguiente reporte ciudadano y responde ÚNICAMENTE con un JSON según esta estructura:
+{
+  "reporte_id": "<id>",
+  "prioridad": "CRITICA" | "ALTA" | "MEDIA" | "BAJA",
+  "score_urgencia": 1 a 10,
+  "requiere_despacho_inmediato": true o false,
+  "riesgo_vida_humana": true o false,
+  "tipo_afectacion": "PERSONAS_ATRAPADAS" | "COLAPSO_ESTRUCTURAL" | "VIA_BLOQUEADA" | "FUGA_O_INCENDIO" | "DANOS_LEVES" | "CONSULTA_O_RUIDO",
+  "justificacion": "explicacion del triaje"
+}
+
+ID de Reporte: {{id}}
+Reporte:
+{{reporte}}

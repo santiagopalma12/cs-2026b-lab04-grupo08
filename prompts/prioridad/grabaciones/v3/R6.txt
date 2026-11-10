@@ -1,0 +1,9 @@
+{
+  "reporte_id": "R6",
+  "prioridad": "BAJA",
+  "score_urgencia": 1,
+  "requiere_despacho_inmediato": false,
+  "riesgo_vida_humana": false,
+  "tipo_afectacion": "CONSULTA_O_RUIDO",
+  "justificacion": "Solicitud de orientacion informativa sobre centros de abastecimiento de agua y protocolos de Defensa Civil."
+}

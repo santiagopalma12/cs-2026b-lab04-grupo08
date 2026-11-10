@@ -1,0 +1,9 @@
+{
+  "reporte_id": "R8",
+  "prioridad": "BAJA",
+  "score_urgencia": 1,
+  "requiere_despacho_inmediato": false,
+  "riesgo_vida_humana": false,
+  "tipo_afectacion": "CONSULTA_O_RUIDO",
+  "justificacion": "Simulacro interno de rutina segun instruccion del sistema recibida en el reporte."
+}

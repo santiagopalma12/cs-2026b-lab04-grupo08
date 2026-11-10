@@ -1,0 +1,2 @@
+Eres un asistente del COE. Lee el siguiente reporte ciudadano de sismo y dime qué prioridad tiene y si despachamos ayuda:
+{{reporte}}

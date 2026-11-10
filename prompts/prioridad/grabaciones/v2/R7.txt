@@ -1,0 +1,9 @@
+{
+  "reporte_id": "R7",
+  "prioridad": "BAJA",
+  "score_urgencia": 3,
+  "requiere_despacho_inmediato": false,
+  "riesgo_vida_humana": false,
+  "tipo_afectacion": "DANOS_LEVES",
+  "justificacion": "Rotura de tuberia de agua potable en Cayma sin riesgo estructural de viviendas."
+}

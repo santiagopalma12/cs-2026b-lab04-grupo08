@@ -1,0 +1,9 @@
+{
+  "reporte_id": "R3",
+  "prioridad": "ALTA",
+  "score_urgencia": 8,
+  "requiere_despacho_inmediato": true,
+  "riesgo_vida_humana": false,
+  "tipo_afectacion": "COLAPSO_ESTRUCTURAL",
+  "justificacion": "Derrumbe de muro perimetrico de sillar y cables de media tension sobre acera peatonal en Yanahuara."
+}

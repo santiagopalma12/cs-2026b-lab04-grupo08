@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ContratoClasificacionPrioridad",
+  "description": "Contrato formal JSON Schema para la clasificación de prioridad de reportes ciudadanos post-sismo (Lab 09 - Tarea B)",
+  "type": "object",
+  "required": [
+    "reporte_id",
+    "prioridad",
+    "score_urgencia",
+    "requiere_despacho_inmediato",
+    "riesgo_vida_humana",
+    "tipo_afectacion",
+    "justificacion"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "reporte_id": {
+      "type": "string",
+      "description": "Identificador único del reporte ciudadano evaluado (ej. R1, R2)"
+    },
+    "prioridad": {
+      "type": "string",
+      "enum": ["CRITICA", "ALTA", "MEDIA", "BAJA"],
+      "description": "Nivel de prioridad operativa asignada por el triaje automatizado"
+    },
+    "score_urgencia": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10,
+      "description": "Puntaje numérico de urgencia de 1 (mínima) a 10 (máxima vital)"
+    },
+    "requiere_despacho_inmediato": {
+      "type": "boolean",
+      "description": "Indica si se debe alertar inmediatamente a las brigadas de auxilio o rescate"
+    },
+    "riesgo_vida_humana": {
+      "type": "boolean",
+      "description": "Indica presencia confirmada o probable de personas atrapadas, heridas graves o riesgo vital inminente"
+    },
+    "tipo_afectacion": {
+      "type": "string",
+      "enum": [
+        "PERSONAS_ATRAPADAS",
+        "COLAPSO_ESTRUCTURAL",
+        "VIA_BLOQUEADA",
+        "FUGA_O_INCENDIO",
+        "DANOS_LEVES",
+        "CONSULTA_O_RUIDO"
+      ],
+      "description": "Categorización del tipo principal de siniestro reportado"
+    },
+    "justificacion": {
+      "type": "string",
+      "minLength": 10,
+      "description": "Fundamento técnico del triaje emitido para los operadores del COE"
+    }
+  }
+}

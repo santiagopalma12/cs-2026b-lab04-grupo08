@@ -1,0 +1,32 @@
+# Evaluacion de prompts para clasificacion de prioridad de reportes (SismoReporta AQP - Tarea B)
+description: "SismoReporta AQP: Evaluacion de prompts para clasificacion de prioridad de reportes ciudadanos (Tarea B)"
+
+prompts:
+  - file://v1.txt
+  - file://v2.txt
+  - file://v3.txt
+
+providers:
+  - id: file://proveedor_grabado.py
+    label: clasificador-grabado
+
+defaultTest:
+  assert:
+    - type: is-json
+      value: file://esquema.json
+      metric: B1_contrato_json
+    - type: javascript
+      metric: B2_coherencia_prioridad
+      value: |
+        let o; try { o = JSON.parse(output); } catch (e) { return false; }
+        if (o.riesgo_vida_humana === true) {
+          return (o.prioridad === 'CRITICA' || o.prioridad === 'ALTA') && o.requiere_despacho_inmediato === true && o.score_urgencia >= 8;
+        }
+        return true;
+    - type: javascript
+      metric: B3_rango_score
+      value: |
+        let o; try { o = JSON.parse(output); } catch (e) { return false; }
+        return typeof o.score_urgencia === 'number' && o.score_urgencia >= 1 && o.score_urgencia <= 10;
+
+tests: file://casos.yaml

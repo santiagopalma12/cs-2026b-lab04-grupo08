@@ -1,0 +1,9 @@
+{
+  "reporte_id": "R5",
+  "prioridad": "BAJA",
+  "score_urgencia": 2,
+  "requiere_despacho_inmediato": false,
+  "riesgo_vida_humana": false,
+  "tipo_afectacion": "DANOS_LEVES",
+  "justificacion": "Fisuras cosmeticas en enlucido de sillar en casona del Centro Historico sin compromiso de muros portantes."
+}

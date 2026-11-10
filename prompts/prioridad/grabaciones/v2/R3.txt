@@ -1,0 +1,9 @@
+{
+  "reporte_id": "R3",
+  "prioridad": "ALTA",
+  "score_urgencia": 8,
+  "requiere_despacho_inmediato": false,
+  "riesgo_vida_humana": false,
+  "tipo_afectacion": "COLAPSO_ESTRUCTURAL",
+  "justificacion": "Colapso de muro de sillar con cables de media tension expuestos pero sin victimas reportadas."
+}

@@ -1,0 +1,9 @@
+{
+  "reporte_id": "R1",
+  "prioridad": "CRITICA",
+  "score_urgencia": 10,
+  "requiere_despacho_inmediato": true,
+  "riesgo_vida_humana": true,
+  "tipo_afectacion": "PERSONAS_ATRAPADAS",
+  "justificacion": "Colapso total de edificio de 4 pisos en Paucarpata con personas atrapadas bajo escombros y cables energizados."
+}
