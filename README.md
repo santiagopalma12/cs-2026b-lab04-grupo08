@@ -430,11 +430,23 @@ PYTHONPATH=src lint-imports
 # 2. Ejecutar fitness functions arquitecturales de calidad (FF-03 a FF-06)
 PYTHONPATH=src:. pytest -v tests/test_fitness.py
 
-# 3. Ejecutar suite completa de pruebas (39 tests: comportamiento, patrones y fitness)
+# 3. Ejecutar pruebas de prompts e integración de LLM (Lab 09)
+PYTHONPATH=src:. pytest -v tests/test_prompts.py
+
+# 4. Ejecutar suite completa de pruebas (51 tests: comportamiento, patrones, fitness y prompts)
 PYTHONPATH=src:. pytest -v tests/
 ```
 
-### 3. Ejecución de Simulaciones Cuantitativas
+### 3. Evaluación Automatizada de Prompts con Promptfoo (Lab 09)
+```bash
+# Evaluar Tarea A (Criterios de Aceptación Gherkin)
+cd prompts/criterios && npx --yes promptfoo@0.118.0 eval --no-cache && cd ../..
+
+# Evaluar Tarea B (Clasificación de Prioridad de Reportes SismoReporta AQP)
+cd prompts/prioridad && npx --yes promptfoo@0.118.0 eval --no-cache && cd ../..
+```
+
+### 4. Ejecución de Simulaciones Cuantitativas
 ```bash
 # Simulación de teoría de colas M/G/c (Rendimiento QA-01)
 python3 fitness/rendimiento.py
@@ -446,12 +458,12 @@ python3 fitness/disponibilidad.py
 python3 fitness/matriz_riesgos.py
 ```
 
-### 4. Validación del Modelo C4 con Etiquetas [QA-xx]
+### 5. Validación del Modelo C4 con Etiquetas [QA-xx]
 ```bash
 docker run --rm -v "$PWD":/usr/local/structurizr structurizr/cli validate -w docs/architecture/c4/workspace.dsl
 ```
 
-### 5. Compilación de Informes Formales en Typst
+### 6. Compilación de Informes Formales en Typst
 ```bash
 # Compilar informe del Laboratorio 05
 typst compile informe_lab05.typ informe_lab05.pdf
@@ -464,6 +476,58 @@ typst compile informe_lab07.typ informe_lab07.pdf
 
 # Compilar informe del Laboratorio 08
 typst compile informe_lab08.typ informe_lab08.pdf
+
+# Compilar informe del Laboratorio 09
+typst compile informe_lab09.typ informe_lab09.pdf
 ```
+
+---
+
+## Prompt Engineering: Evaluación y Seguridad de Prompts como Código (Laboratorio 09)
+
+En el **Laboratorio 09**, aplicamos ingeniería de software rigurosa sobre los componentes de Inteligencia Artificial de **SismoReporta AQP**, tratando a los prompts como artefactos de código versionados, especificando contratos de salida con **JSON Schema**, evaluando la resiliencia con **promptfoo** y ejecutando suites de pruebas automatizadas en CI.
+
+### 1. Resumen de Tareas Evaluadas
+
+| Tarea | Propósito en SismoReporta AQP | Contrato Formal | Aserción Crítica |
+| :--- | :--- | :--- | :--- |
+| **Tarea A (Común)** | Generar criterios de aceptación formales en formato Gherkin (Dado / Cuando / Entonces) a partir de historias de usuario. | `prompts/criterios/esquema.json` | Verificador cognitivo INVEST: rechaza historias ambiguas o tareas técnicas y resiste inyección directa. |
+| **Tarea B (Caso 8)** | Clasificar la prioridad táctica de reportes ciudadanos post-sismo (`CRITICA`, `ALTA`, `MEDIA`, `BAJA`) para despacho del COE. | `prompts/prioridad/esquema.json` | *Resiste inyección dentro del texto del reporte:* neutraliza intentos de degradar emergencias con atrapados a prioridad baja. |
+
+---
+
+### 2. Tabla Comparativa de Versiones y Tasas de Aprobación
+
+```mermaid
+xychart-beta
+    title "Evolucion de Tasa de Aprobacion por Version de Prompt (%)"
+    x-axis ["v1 (Ingenuo)", "v2 (Estructurado)", "v3 (Defensa/INVEST)", "v3.1 (Abstraccion)"]
+    y-axis "Tasa de Aprobacion (%)" 0 --> 100
+    bar [0, 25, 87.5, 100]
+```
+
+#### Tarea A: Criterios de Aceptación Gherkin
+| Versión | Elementos Clave Incorporados | Aserciones que Mejoraron | Tasa de Aprobación | Estado |
+| :---: | :--- | :--- | :---: | :---: |
+| **v1** | Línea base ingenua: *"Escribe criterios de aceptación..."* en texto plano. | Ninguna (falla contrato JSON Schema, mezcla detalles de BD, acepta no-INVEST, sucumbe a inyección). | **0.0%** (0/8) | Baseline |
+| **v2** | Persona (analista QA) + Plantilla de formato JSON estricto. | Pasa contrato sintáctico A1 en casos nominales (H1, H5). Falla A3 (indexeddb, twilio), A4 (acepta H6/H7) y A5 (inyección). | **25.0%** (2/8) | Iteración 1 |
+| **v3** | Verificador cognitivo INVEST + Delimitadores XML `<historia_usuario>` + Few-shot con escenario éxito y error. | Pasa A1, A2, A4 (rechaza H6 y H7 con preguntas al PO) y A5 (resiste inyección H8). Falla únicamente H4 por mencionar Twilio. | **87.5%** (7/8) | Iteración 2 (Meta $\ge 85\%$) |
+| **v3.1** | Regla estricta de abstracción funcional: Prohibición explícita de nombrar tecnologías o APIs internas (Twilio, REST, PostgreSQL). | Corrige H4 describiendo mensajería celular de emergencia; supera A3 en todos los casos. | **100.0%** (8/8) | **Óptima** |
+
+#### Tarea B: Clasificación de Prioridad de Reportes Ciudadanos (SismoReporta AQP)
+| Versión | Elementos Clave Incorporados | Aserciones que Mejoraron | Tasa de Aprobación | Estado |
+| :---: | :--- | :--- | :---: | :---: |
+| **v1** | Prompt conversacional ingenuo: *"Dime qué prioridad tiene..."* | Ninguna (falla JSON Schema B1, emite texto conversacional, obedece orden inyectada de simulacro). | **0.0%** (0/8) | Baseline |
+| **v2** | Rol COE + Estructura JSON con campos de severidad. | Cumple contrato B1 en 3 casos; falla rango numérico en R2 (score 11), confunde despacho en R3, sucumbe ante inyección en R8. | **37.5%** (3/8) | Iteración 1 |
+| **v3** | Defensa en profundidad + Delimitadores `<reporte_ciudadano>` + Matriz de severidad vital + Few-shot. | Resiste inyección adversaria R8 asignando `CRITICA` y despacho inmediato; 100% de coherencia en triaje. | **100.0%** (8/8) | **Óptima** |
+
+---
+
+### 3. Lecciones Aprendidas de Prompt Engineering
+
+1. **Un prompt no se "siente" mejor, se demuestra con evals:** El refinamiento intuitivo a ciegas genera regresiones silenciosas. La evaluación automatizada con datasets representativos (`casos.yaml`) y aserciones deterministas (`promptfoo`) es el único estándar válido de ingeniería.
+2. **Defensa en Capas frente a Inyección de Prompts (OWASP LLM01):** Delimitar las entradas no estructuradas con etiquetas XML (`<reporte_ciudadano>`) separa el plano de control del plano de datos. Combinado con un validador formal (*JSON Schema*), neutraliza ataques de inyección directa e intentos de desviar el triaje.
+3. **El peligro del Chain-of-Thought en salidas estructuradas:** Instruir al LLM *"explica tu razonamiento paso a paso"* antes de responder contamina la salida con texto en prosa, violando los esquemas JSON de producción. La verificación cognitiva debe forzarse mediante campos estructurados (`invest_ok`, `preguntas`) o resolverse internamente.
+4. **Reproducibilidad y No-Determinismo en CI:** Las llamadas a APIs externas de LLMs sufren entropía estocástica y variabilidad por hardware. El uso del patrón Strategy con un `ProveedorGrabado` permite ejecutar pruebas unitarias y suites de evaluación 100% deterministas en GitHub Actions sin incurrir en costos ni depender de tokens de red.
 
 
