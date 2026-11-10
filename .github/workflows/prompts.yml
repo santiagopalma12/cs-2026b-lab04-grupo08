@@ -1,0 +1,57 @@
+name: evaluacion-de-prompts-ci
+
+on:
+  push:
+    paths:
+      - "prompts/**"
+      - "src/sismoreporta/generador_criterios.py"
+      - "src/sismoreporta/clasificador_prioridad.py"
+      - "tests/test_prompts.py"
+      - ".github/workflows/prompts.yml"
+  pull_request:
+    paths:
+      - "prompts/**"
+      - "src/sismoreporta/generador_criterios.py"
+      - "src/sismoreporta/clasificador_prioridad.py"
+      - "tests/test_prompts.py"
+
+jobs:
+  evals-y-pruebas:
+    name: Evaluacion automatizada de prompts y pruebas
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Configurar Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependencias Python
+        run: |
+          pip install --upgrade pip
+          pip install jsonschema pytest
+
+      - name: Ejecutar pruebas unitarias de integracion
+        run: |
+          PYTHONPATH=. pytest -v tests/test_prompts.py
+
+      - name: Evaluar Tarea A (Criterios de Aceptacion Gherkin)
+        working-directory: prompts/criterios
+        run: |
+          npx --yes promptfoo@0.118.0 eval --no-cache
+        env:
+          PROMPTFOO_DISABLE_TELEMETRY: "1"
+
+      - name: Evaluar Tarea B (Clasificacion de Prioridad)
+        working-directory: prompts/prioridad
+        run: |
+          npx --yes promptfoo@0.118.0 eval --no-cache
+        env:
+          PROMPTFOO_DISABLE_TELEMETRY: "1"
