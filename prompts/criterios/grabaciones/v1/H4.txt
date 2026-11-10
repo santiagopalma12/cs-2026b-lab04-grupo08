@@ -1,0 +1,4 @@
+Criterios de aceptación para H4:
+1. El coordinador define el radio de 500 metros en el mapa.
+2. El sistema envía los mensajes SMS a través de la API REST de Twilio.
+3. Los usuarios dentro del polígono reciben la notificación de evacuación de inmediato.

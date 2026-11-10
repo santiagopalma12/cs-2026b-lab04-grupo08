@@ -1,0 +1,4 @@
+Criterios de aceptación para H6:
+1. El tiempo de carga de las pantallas debe ser menor a 1 segundo.
+2. La tasa de éxito en las operaciones debe ser del 99.9%.
+3. El diseño debe tener una puntuación de usabilidad alta en pruebas con usuarios.

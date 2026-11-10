@@ -1,0 +1,5 @@
+Criterios de aceptación para H3:
+1. El coordinador selecciona una brigada disponible en el mapa.
+2. La brigada recibe la notificación en su teléfono.
+3. El tiempo de respuesta debe ser menor a 15 minutos.
+4. El estado del incidente cambia a ASIGNADO en la tabla de incidentes.

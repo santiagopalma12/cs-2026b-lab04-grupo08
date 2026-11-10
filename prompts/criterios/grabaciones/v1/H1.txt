@@ -1,0 +1,5 @@
+Criterios de aceptación para H1:
+1. El ciudadano puede adjuntar su foto y el GPS se obtiene automáticamente.
+2. Los datos del reporte se guardan en la base de datos PostgreSQL.
+3. El coordinador del COE puede ver el incidente en la lista.
+4. El sistema debe responder rápido y ser fácil de usar.

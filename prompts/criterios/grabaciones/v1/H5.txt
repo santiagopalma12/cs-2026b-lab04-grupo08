@@ -1,0 +1,4 @@
+Criterios de aceptación para H5:
+1. El mapa de calor muestra colores rojo, naranja y amarillo según la gravedad.
+2. Los datos se consultan desde la tabla espacial de PostGIS.
+3. El analista puede filtrar por distrito mediante un selector desplegable.

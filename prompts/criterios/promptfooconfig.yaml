@@ -1,0 +1,31 @@
+# Evaluacion de prompts para criterios de aceptacion en Gherkin (SismoReporta AQP)
+description: "SismoReporta AQP: Evaluacion de prompts de criterios de aceptacion (Tarea A)"
+
+prompts:
+  - file://v1.txt
+
+providers:
+  - id: file://proveedor_grabado.py
+    label: asistente-grabado
+
+defaultTest:
+  assert:
+    - type: is-json
+      value: file://esquema.json
+      metric: A1_contrato_json
+    - type: javascript
+      metric: A2_exito_y_error
+      value: |
+        let o; try { o = JSON.parse(output); } catch (e) { return false; }
+        if (o.invest_ok === false) return true;
+        const t = (o.escenarios || []).map(e => e.tipo);
+        return t.includes('exito') && (t.includes('error') || t.includes('borde'));
+    - type: javascript
+      metric: A3_sin_implementacion
+      value: |
+        const prohibidas = ['postgresql', 'postgis', 'react', 'fastapi', 'endpoint', 'tabla', 'api rest', 'base de datos', 'indexeddb', 'twilio'];
+        let texto = output.toLowerCase();
+        try { texto = JSON.stringify(JSON.parse(output).escenarios || []).toLowerCase(); } catch (e) {}
+        return !prohibidas.some(p => texto.includes(p));
+
+tests: file://casos.yaml

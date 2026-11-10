@@ -1,0 +1,4 @@
+Criterios de aceptación para H2:
+1. Si no hay señal, la aplicación PWA almacena el reporte en IndexedDB localmente.
+2. Cuando regrese la conexión a internet, el sistema debe sincronizar el reporte sin perder datos.
+3. La interfaz debe mostrar un indicador de que el reporte está pendiente de envío.

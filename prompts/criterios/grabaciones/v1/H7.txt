@@ -1,0 +1,4 @@
+Criterios de aceptación para H7:
+1. Instalar PostgreSQL 16 y habilitar la extensión PostGIS.
+2. Crear índices GiST sobre la columna geométrica de reportes.
+3. Configurar particionamiento por rangos mensuales en la tabla de incidentes.
