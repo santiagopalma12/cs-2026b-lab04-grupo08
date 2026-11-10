@@ -1,0 +1,21 @@
+{
+  "historia_id": "H7",
+  "invest_ok": true,
+  "preguntas": [],
+  "escenarios": [
+    {
+      "titulo": "Configuracion de cluster de base de datos",
+      "tipo": "exito",
+      "dado": ["que se inicializan los nodos del cluster postgresql"],
+      "cuando": "el administrador habilita la extension postgis",
+      "entonces": ["las consultas geoespaciales con indices gist se ejecutan correctamente"]
+    },
+    {
+      "titulo": "Fallo en creacion de particiones",
+      "tipo": "error",
+      "dado": ["que la tabla no tiene definidas claves de particion"],
+      "cuando": "se ejecuta el script de migracion",
+      "entonces": ["el motor de base de datos rechaza la operacion"]
+    }
+  ]
+}

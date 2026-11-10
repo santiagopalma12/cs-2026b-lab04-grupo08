@@ -1,0 +1,21 @@
+{
+  "historia_id": "H4",
+  "invest_ok": true,
+  "preguntas": [],
+  "escenarios": [
+    {
+      "titulo": "Envio de alerta zonal",
+      "tipo": "exito",
+      "dado": ["que se delimita un perimetro de evacuacion de 500 metros"],
+      "cuando": "el coordinador aprueba la emision de la alerta",
+      "entonces": ["el sistema envia un mensaje masivo a traves de twilio y notificacion push"]
+    },
+    {
+      "titulo": "Sin ciudadanos en el radio de riesgo",
+      "tipo": "borde",
+      "dado": ["que el radio de 500 metros se encuentra despoblado"],
+      "cuando": "se ejecuta la notificacion de alerta",
+      "entonces": ["el sistema reporta cero destinatarios alcanzados"]
+    }
+  ]
+}

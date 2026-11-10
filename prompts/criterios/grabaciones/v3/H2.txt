@@ -1,0 +1,21 @@
+{
+  "historia_id": "H2",
+  "invest_ok": true,
+  "preguntas": [],
+  "escenarios": [
+    {
+      "titulo": "Persistencia de reporte sin senal celular",
+      "tipo": "exito",
+      "dado": ["que el telefono movil esta en modo sin cobertura"],
+      "cuando": "el ciudadano completa y guarda el reporte",
+      "entonces": ["el sistema almacena la informacion en la memoria local del dispositivo", "informa que el envio sera automatico al recuperar cobertura"]
+    },
+    {
+      "titulo": "Reconexion y transmision en segundo plano",
+      "tipo": "borde",
+      "dado": ["que hay tres reportes en cola local"],
+      "cuando": "el dispositivo restablece la conexion de datos",
+      "entonces": ["el sistema transmite los reportes pendientes y confirma al usuario"]
+    }
+  ]
+}

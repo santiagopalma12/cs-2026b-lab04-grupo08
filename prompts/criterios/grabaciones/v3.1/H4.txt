@@ -1,0 +1,21 @@
+{
+  "historia_id": "H4",
+  "invest_ok": true,
+  "preguntas": [],
+  "escenarios": [
+    {
+      "titulo": "Difusion de alerta de evacuacion zonal por mensajeria",
+      "tipo": "exito",
+      "dado": ["que ocurre un derrumbe con fuga de gas", "se fija un perimetro de evacuacion de 500 metros"],
+      "cuando": "el coordinador emite la orden de evacuacion",
+      "entonces": ["el sistema difunde alertas mediante mensajes de texto y avisos prioritarios a los telefonos moviles en el radio establecido"]
+    },
+    {
+      "titulo": "Fallo en entrega de mensajes por congestion",
+      "tipo": "error",
+      "dado": ["que la red de telefonia celular presenta alta congestion"],
+      "cuando": "se despacha la alerta de emergencia",
+      "entonces": ["el sistema reintenta la emision por canales de comunicacion auxiliares y notifica el estado al coordinador"]
+    }
+  ]
+}

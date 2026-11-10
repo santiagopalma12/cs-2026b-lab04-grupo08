@@ -1,0 +1,21 @@
+{
+  "historia_id": "H4",
+  "invest_ok": true,
+  "preguntas": [],
+  "escenarios": [
+    {
+      "titulo": "Difusion de alerta de evacuacion zonal",
+      "tipo": "exito",
+      "dado": ["que ocurre un derrumbe con fuga de gas", "se fija un radio de 500 metros"],
+      "cuando": "el coordinador emite la orden de evacuacion",
+      "entonces": ["el sistema contacta la pasarela twilio para enviar alertas SMS a todos los numeros registrados en la zona"]
+    },
+    {
+      "titulo": "Fallo en entrega de mensajes",
+      "tipo": "error",
+      "dado": ["que las antenas de telefonia celular estan colapsadas"],
+      "cuando": "se despacha la alerta",
+      "entonces": ["el sistema reintenta el envio prioritario por canales alternativos"]
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "historia_id": "H5",
+  "invest_ok": true,
+  "preguntas": [],
+  "escenarios": [
+    {
+      "titulo": "Visualizacion distrital de densidad de emergencias",
+      "tipo": "exito",
+      "dado": ["que ingresan reportes continuos desde varios distritos"],
+      "cuando": "el analista consulta el panel de mando",
+      "entonces": ["el sistema proyecta la concentracion de incidentes mediante gradientes de color"]
+    },
+    {
+      "titulo": "Sector sin eventos registrados",
+      "tipo": "borde",
+      "dado": ["que no existen reportes activos en un distrito especifico"],
+      "cuando": "se enfoca dicho sector",
+      "entonces": ["el sistema muestra el area transparente y sin indicadores de calor"]
+    }
+  ]
+}

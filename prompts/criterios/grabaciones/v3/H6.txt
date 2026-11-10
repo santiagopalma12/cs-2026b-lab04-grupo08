@@ -1,0 +1,10 @@
+{
+  "historia_id": "H6",
+  "invest_ok": false,
+  "preguntas": [
+    "Cual es la metrica cuantificable de tiempo de respuesta (en milisegundos) esperada para considerar el sistema rapido?",
+    "Que criterios especificos de usabilidad o tasa de exito de tareas determinaran que la interfaz es intuitiva?",
+    "Cual es el acuerdo de nivel de servicio (SLA) o porcentaje de disponibilidad objetivo que define la tolerancia a fallos?"
+  ],
+  "escenarios": []
+}

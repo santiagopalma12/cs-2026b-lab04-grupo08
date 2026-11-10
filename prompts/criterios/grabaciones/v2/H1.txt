@@ -1,0 +1,21 @@
+{
+  "historia_id": "H1",
+  "invest_ok": true,
+  "preguntas": [],
+  "escenarios": [
+    {
+      "titulo": "Registro exitoso con GPS y foto",
+      "tipo": "exito",
+      "dado": ["que el ciudadano se encuentra en una zona afectada", "el GPS del movil esta encendido"],
+      "cuando": "captura la foto del colapso y confirma el envio del reporte",
+      "entonces": ["el sistema almacena el incidente con sus coordenadas exactas", "muestra el ticket de confirmacion"]
+    },
+    {
+      "titulo": "Fallo por falta de permisos de localizacion",
+      "tipo": "error",
+      "dado": ["que el usuario tiene deshabilitado el acceso a la ubicacion"],
+      "cuando": "intenta registrar el reporte de emergencia",
+      "entonces": ["el sistema solicita activar el sensor de ubicacion y no permite continuar sin coordenadas"]
+    }
+  ]
+}

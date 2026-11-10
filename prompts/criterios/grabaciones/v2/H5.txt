@@ -1,0 +1,21 @@
+{
+  "historia_id": "H5",
+  "invest_ok": true,
+  "preguntas": [],
+  "escenarios": [
+    {
+      "titulo": "Visualizacion del mapa de calor por distrito",
+      "tipo": "exito",
+      "dado": ["que existen mas de 50 reportes activos en la provincia"],
+      "cuando": "el analista accede al tablero de mando",
+      "entonces": ["el sistema renderiza el mapa coloreando las zonas con mayor densidad de colapsos"]
+    },
+    {
+      "titulo": "Distrito sin incidentes reportados",
+      "tipo": "borde",
+      "dado": ["que un distrito no registra llamadas ni reportes"],
+      "cuando": "el analista aplica filtro distrital",
+      "entonces": ["el sistema muestra el distrito en estado neutro y sin calor acumulado"]
+    }
+  ]
+}

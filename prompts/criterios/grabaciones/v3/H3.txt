@@ -1,0 +1,21 @@
+{
+  "historia_id": "H3",
+  "invest_ok": true,
+  "preguntas": [],
+  "escenarios": [
+    {
+      "titulo": "Asignacion optima de brigada por cercania",
+      "tipo": "exito",
+      "dado": ["que hay un reporte con personas atrapadas", "existen dos brigadas operativas en el distrito"],
+      "cuando": "el coordinador solicita el despacho de auxilio",
+      "entonces": ["el sistema selecciona y despacha a la brigada con menor tiempo estimado de llegada"]
+    },
+    {
+      "titulo": "Sin brigadas disponibles en la zona",
+      "tipo": "error",
+      "dado": ["que todas las brigadas del sector estan ocupadas"],
+      "cuando": "el coordinador intenta la asignacion automatica",
+      "entonces": ["el sistema eleva una alerta de saturacion y sugiere brigadas de distritos adyacentes"]
+    }
+  ]
+}

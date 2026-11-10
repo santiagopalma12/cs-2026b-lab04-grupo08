@@ -1,0 +1,14 @@
+{
+  "historia_id": "H3",
+  "invest_ok": true,
+  "preguntas": [],
+  "escenarios": [
+    {
+      "titulo": "Asignacion de brigada mas cercana",
+      "tipo": "exito",
+      "dado": ["que existe una brigada de rescate disponible a 1 km del colapso"],
+      "cuando": "el coordinador solicita asignacion de brigada",
+      "entonces": ["el sistema despacha la unidad y notifica al lider de cuadrilla"]
+    }
+  ]
+}

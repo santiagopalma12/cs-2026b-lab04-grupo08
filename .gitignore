@@ -36,4 +36,4 @@ abet.png
 sistemas.png
 .pytest_cache/
 .importlinter_cache/
-
+*.log

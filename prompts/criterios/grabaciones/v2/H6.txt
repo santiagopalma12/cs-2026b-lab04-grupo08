@@ -1,0 +1,21 @@
+{
+  "historia_id": "H6",
+  "invest_ok": true,
+  "preguntas": [],
+  "escenarios": [
+    {
+      "titulo": "Sistema rapido y sin fallas",
+      "tipo": "exito",
+      "dado": ["que el usuario abre la aplicacion"],
+      "cuando": "interactua con los botones",
+      "entonces": ["el sistema responde inmediatamente de forma intuitiva"]
+    },
+    {
+      "titulo": "Prueba de carga",
+      "tipo": "borde",
+      "dado": ["que ingresan miles de usuarios en simultaneo"],
+      "cuando": "todos envian solicitudes",
+      "entonces": ["la aplicacion nunca se cae"]
+    }
+  ]
+}

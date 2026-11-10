@@ -1,0 +1,21 @@
+{
+  "historia_id": "H2",
+  "invest_ok": true,
+  "preguntas": [],
+  "escenarios": [
+    {
+      "titulo": "Guardado offline exitoso",
+      "tipo": "exito",
+      "dado": ["que el dispositivo no cuenta con conexion a internet"],
+      "cuando": "el ciudadano presiona registrar reporte",
+      "entonces": ["el reporte se guarda en la base indexeddb del navegador local", "se notifica al usuario que se enviara al recuperar cobertura"]
+    },
+    {
+      "titulo": "Envio automatico al reanudar senal",
+      "tipo": "borde",
+      "dado": ["que existen reportes pendientes almacenados"],
+      "cuando": "el dispositivo detecta conexion celular",
+      "entonces": ["el sistema sincroniza todos los reportes pendientes de forma desatendida"]
+    }
+  ]
+}

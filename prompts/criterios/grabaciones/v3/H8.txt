@@ -1,0 +1,21 @@
+{
+  "historia_id": "H8",
+  "invest_ok": true,
+  "preguntas": [],
+  "escenarios": [
+    {
+      "titulo": "Registro de reporte de via vehicular bloqueada",
+      "tipo": "exito",
+      "dado": ["que el ciudadano transita por una arteria obstaculizada en el distrito de Yanahuara"],
+      "cuando": "envia la alerta indicando la calzada interrumpida",
+      "entonces": ["el sistema registra el bloqueo vial y lo notifica a las unidades de transito"]
+    },
+    {
+      "titulo": "Omision de direccion o referencia fisica",
+      "tipo": "error",
+      "dado": ["que el reporte de bloqueo no incluye calle ni coordenadas"],
+      "cuando": "se presiona registrar incidente",
+      "entonces": ["el sistema solicita especificar la via afectada antes de aceptar la alerta"]
+    }
+  ]
+}

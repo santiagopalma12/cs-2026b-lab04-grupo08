@@ -1,0 +1,21 @@
+{
+  "historia_id": "H1",
+  "invest_ok": true,
+  "preguntas": [],
+  "escenarios": [
+    {
+      "titulo": "Registro exitoso de reporte con GPS y fotografia",
+      "tipo": "exito",
+      "dado": ["que el ciudadano se encuentra en el area del sismo", "los permisos de ubicacion estan concedidos"],
+      "cuando": "captura la foto de la estructura y presiona enviar reporte",
+      "entonces": ["el sistema registra el incidente con latitud y longitud", "el ciudadano recibe un numero de ticket"]
+    },
+    {
+      "titulo": "Rechazo por coordenadas no disponibles",
+      "tipo": "error",
+      "dado": ["que el sensor de posicionamiento global no responde"],
+      "cuando": "el ciudadano confirma el envio del reporte",
+      "entonces": ["el sistema alerta que la ubicacion es obligatoria y no procesa el registro"]
+    }
+  ]
+}

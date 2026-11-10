@@ -1,0 +1,10 @@
+{
+  "historia_id": "H7",
+  "invest_ok": false,
+  "preguntas": [
+    "Cual es el valor de negocio o capacidad funcional que esta tarea tecnica habilita para el ciudadano o brigadista?",
+    "Que volumen esperado de consultas geoespaciales concurrentes debe soportar la arquitectura de datos?",
+    "Podria redactarse como un requisito funcional desde la perspectiva del operador que gestiona reportes geoespaciales?"
+  ],
+  "escenarios": []
+}
